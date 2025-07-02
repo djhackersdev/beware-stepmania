@@ -5,7 +5,7 @@ AC_CONFIG_AUX_DIR(autoconf)
 AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE(StepMania, 3.001)
-AM_CONFIG_HEADER(src/config.h)
+AC_CONFIG_HEADERS(src/config.h)
 AM_MAINTAINER_MODE
 
 # We don't want PROG_CC/CXX default settings, but don't ignore explicit settings.
