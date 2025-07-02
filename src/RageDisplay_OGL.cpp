@@ -32,13 +32,14 @@
 
 /* Not in glext.h: */
 typedef bool (APIENTRY * PWSWAPINTERVALEXTPROC) (int interval);
-
+typedef int ( *PFNGLXSWAPINTERVALSGIPROC) (int interval);
 
 /* Extension functions we use.  Put these in a namespace instead of in oglspecs_t,
  * so they can be called like regular functions. */
 static struct GLExt_t
 {
 	PWSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+	PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
 	PFNGLCOLORTABLEPROC glColorTableEXT;
 	PFNGLCOLORTABLEPARAMETERIVPROC glGetColorTableParameterivEXT;
 	PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
@@ -645,6 +646,8 @@ void SetupExtensions()
 	GLExt.wglSwapIntervalEXT = wglSwapIntervalEXT;
 #endif
 
+        GLExt.glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC) wind->GetProcAddress("glXSwapIntervalSGI");
+
 	if( HasExtension("GL_EXT_paletted_texture") )
 	{
 		GLExt.glColorTableEXT = (PFNGLCOLORTABLEPROC) wind->GetProcAddress("glColorTableEXT");
@@ -780,6 +783,9 @@ CString RageDisplay_OGL::TryVideoMode( VideoModeParams p, bool &bNewDeviceOut )
 	 * to do this, for other archs?) */
 	if( GLExt.wglSwapIntervalEXT )
 	    GLExt.wglSwapIntervalEXT(p.vsync);
+	
+	if( GLExt.glXSwapIntervalSGI )
+	    GLExt.glXSwapIntervalSGI(p.vsync);
 	
 	ResolutionChanged();
 
