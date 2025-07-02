@@ -6,7 +6,8 @@
 
 extern "C"
 {
-#include <lua.hpp>
+#include <lua.h>
+#include <lualib.h>
 }
 
 /* Argument helpers: */
