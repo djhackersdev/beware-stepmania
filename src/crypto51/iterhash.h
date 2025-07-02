@@ -92,7 +92,7 @@ template <class T, class B, class BASE> void IteratedHashBase2<T, B, BASE>::Trun
 {
 	this->ThrowIfInvalidTruncatedSize(size);
 
-	PadLastBlock(this->BlockSize() - 2*sizeof(HashWordType));
+	this->PadLastBlock(this->BlockSize() - 2*sizeof(HashWordType));
 	CorrectEndianess(this->m_data, this->m_data, this->BlockSize() - 2*sizeof(HashWordType));
 
 	this->m_data[this->m_data.size()-2] = B::ToEnum() ? this->GetBitCountHi() : this->GetBitCountLo();
