@@ -65,7 +65,7 @@ void PrefsManager::Init()
 	m_iMaxTextureResolution = 2048;
 	m_iRefreshRate = REFRESH_DEFAULT;
 	m_bOnlyDedicatedMenuButtons = false;
-	m_bCelShadeModels = false;		// Work-In-Progress.. disable by default.
+	m_bCelShadeModels = true;		// Work-In-Progress.. disable by default.
 	m_fConstantUpdateDeltaSeconds = 0;
 #ifdef DEBUG
 	m_bShowStats = true;
@@ -73,24 +73,26 @@ void PrefsManager::Init()
 	m_bShowStats = false;
 #endif
 	m_bShowBanners = true ;
-	m_BackgroundMode = BGMODE_ANIMATIONS;
+	m_BackgroundMode = BGMODE_RANDOMMOVIES;
+	m_bEnableBGAnim = true;
 	m_iNumBackgrounds = 8;
 	m_bShowDanger = true;
-	m_fBGBrightness = 0.8f;
+	m_fBGBrightness = 0.9f;
 	m_bMenuTimer = true;
 	m_iNumArcadeStages = 3;
 	m_bEventMode = false;
+	m_bArcadeEventMode = false;
 	m_bAutoPlay = false;
 	m_fJudgeWindowScale = 1.0f;
 	m_fJudgeWindowAdd = 0;
 	m_fLifeDifficultyScale = 1.0f;
-	m_fJudgeWindowSecondsMarvelous =	0.0225f;
-	m_fJudgeWindowSecondsPerfect =		0.045f;
-	m_fJudgeWindowSecondsGreat =		0.090f;
-	m_fJudgeWindowSecondsGood =			0.135f;
-	m_fJudgeWindowSecondsBoo =			0.180f;
+	m_fJudgeWindowSecondsMarvelous =	0.016666f;
+	m_fJudgeWindowSecondsPerfect =		0.033333f;
+	m_fJudgeWindowSecondsGreat =		0.083000f;
+	m_fJudgeWindowSecondsGood =			0.120000f;
+	m_fJudgeWindowSecondsBoo =			0.158333f;
 	m_fJudgeWindowSecondsOK =			0.250f;	// allow enough time to take foot off and put back on
-	m_fJudgeWindowSecondsMine =			0.090f;	// same as great
+	m_fJudgeWindowSecondsMine =			0.083000f;	// same as great
 	m_fJudgeWindowSecondsAttack =		0.135f;
 	m_fLifeDeltaPercentChangeMarvelous =	+0.008f;
 	m_fLifeDeltaPercentChangePerfect =		+0.008f;
@@ -177,31 +179,31 @@ void PrefsManager::Init()
 	m_bFastLoad = true;
 	m_MusicWheelUsesSections = ALWAYS;
 	m_iMusicWheelSwitchSpeed = 10;
-	m_bEasterEggs = true;
-	m_iMarvelousTiming = 2;
-	m_iCoinMode = COIN_HOME;
+	m_bEasterEggs = false;
+	m_iMarvelousTiming = 1;
+	m_iCoinMode = COIN_FREE;
 	m_iCoinsPerCredit = 1;
 	m_Premium = NO_PREMIUM;
 	m_bDelayedCreditsReconcile = false;
 	m_iBoostAppPriority = -1;
 	m_bSmoothLines = false;
-	m_ShowSongOptions = YES;
-	m_bDancePointsForOni = false;
+	m_ShowSongOptions = NO;
+	m_bDancePointsForOni = true;
 	m_bPercentageScoring = false;
 	m_fMinPercentageForMachineSongHighScore = 0.5f;
 	m_fMinPercentageForMachineCourseHighScore = 0.001f;	// don't save course scores with 0 percentage
 	m_bDisqualification = false;
-	m_bShowLyrics = true;
+	m_bShowLyrics = false;
 	m_bAutogenSteps = true;
 	m_bAutogenGroupCourses = true;
 	m_bBreakComboToGetItem = false;
 	m_bLockCourseDifficulties = true;
-	m_ShowDancingCharacters = CO_RANDOM;
+	m_ShowDancingCharacters = CO_OFF;
 	m_bUseUnlockSystem = false;
 	m_bFirstRun = true;
 	m_bAutoMapOnJoyChange = true;
 	m_fGlobalOffsetSeconds = 0;
-	m_bShowBeginnerHelper = false;
+	m_bShowBeginnerHelper = true;
 	m_bEndlessBreakEnabled = true;
 	m_iEndlessNumStagesUntilBreak = 5;
 	m_iEndlessBreakLength = 5;
@@ -209,13 +211,13 @@ void PrefsManager::Init()
 
 	// set to 0 so people aren't shocked at first
 	m_iProgressiveLifebar = 0;
-	m_iProgressiveNonstopLifebar = 0;
-	m_iProgressiveStageLifebar = 0;
+	m_iProgressiveNonstopLifebar = 1;
+	m_iProgressiveStageLifebar = 1;
 
 	/* DDR Extreme-style extra stage support.
 	 * Default off so people used to the current behavior (or those with extra
 	 * stage CRS files) don't get it changed around on them. */
-	m_bPickExtraStage = false;
+	m_bPickExtraStage = true;
 
 	m_bComboContinuesBetweenSongs = false;
 
@@ -225,7 +227,7 @@ void PrefsManager::Init()
 	m_bSubSortByNumSteps = false;
 	m_iScoringType = SCORING_MAX2;
 
-	m_iGetRankingName = RANKING_ON;
+	m_iGetRankingName = RANKING_LIST;
 
 	m_fLongVerSongSeconds = 60*2.5f;	// Dynamite Rave is 2:55
 	m_fMarathonVerSongSeconds = 60*5.f;
@@ -291,6 +293,7 @@ void PrefsManager::Init()
 
 	m_sCoursesToShowRanking = "";
 
+	m_fDebounceTime = 0.01f;
 	m_bLogToDisk = true;
 	m_bForceLogFlush = false;
 #ifdef DEBUG
@@ -371,6 +374,8 @@ void PrefsManager::ReadPrefsFromFile( CString sIni )
 	ini.GetValue( "Options", "MenuTimer",						m_bMenuTimer );
 	ini.GetValue( "Options", "NumArcadeStages",					m_iNumArcadeStages );
 	ini.GetValue( "Options", "EventMode",						m_bEventMode );
+	ini.GetValue( "Options", "EnableBGAnim",					m_bEnableBGAnim );	
+	ini.GetValue( "Options", "ArcadeEventMode",					m_bArcadeEventMode );
 	ini.GetValue( "Options", "AutoPlay",						m_bAutoPlay );
 	ini.GetValue( "Options", "JudgeWindowScale",				m_fJudgeWindowScale );
 	ini.GetValue( "Options", "JudgeWindowAdd",					m_fJudgeWindowAdd );
@@ -579,6 +584,7 @@ void PrefsManager::ReadPrefsFromFile( CString sIni )
 	FixSlashesInPlace(m_sAdditionalSongFolders);
 	FixSlashesInPlace(m_sAdditionalFolders);
 
+	ini.GetValue( "Options", "DebounceTime",					m_fDebounceTime );
 	ini.GetValue( "Debug", "LogToDisk",							m_bLogToDisk );
 	ini.GetValue( "Debug", "ForceLogFlush",						m_bForceLogFlush );
 	ini.GetValue( "Debug", "ShowLogOutput",						m_bShowLogOutput );
@@ -609,12 +615,14 @@ void PrefsManager::SaveGlobalPrefsToDisk() const
 	ini.SetValue( "Options", "ShowStats",						m_bShowStats );
 	ini.SetValue( "Options", "ShowBanners",						m_bShowBanners );
 	ini.SetValue( "Options", "BackgroundMode",					m_BackgroundMode);
+	ini.SetValue( "Options", "EnableBGAnim",					m_bEnableBGAnim );
 	ini.SetValue( "Options", "NumBackgrounds",					m_iNumBackgrounds);
 	ini.SetValue( "Options", "ShowDanger",						m_bShowDanger );
 	ini.SetValue( "Options", "BGBrightness",					m_fBGBrightness );
 	ini.SetValue( "Options", "MenuTimer",						m_bMenuTimer );
 	ini.SetValue( "Options", "NumArcadeStages",					m_iNumArcadeStages );
 	ini.SetValue( "Options", "EventMode",						m_bEventMode );
+	ini.SetValue( "Options", "ArcadeEventMode",					m_bArcadeEventMode );
 	ini.SetValue( "Options", "AutoPlay",						m_bAutoPlay );
 	ini.SetValue( "Options", "JudgeWindowScale",				m_fJudgeWindowScale );
 	ini.SetValue( "Options", "JudgeWindowAdd",					m_fJudgeWindowAdd );
@@ -822,6 +830,7 @@ void PrefsManager::SaveGlobalPrefsToDisk() const
 	ini.SetValue( "Options", "AdditionalSongFolders", 			m_sAdditionalSongFolders);
 	ini.SetValue( "Options", "AdditionalFolders", 				m_sAdditionalFolders);
 
+	ini.SetValue( "Options", "DebounceTime",					m_fDebounceTime );
 	ini.SetValue( "Debug", "LogToDisk",							m_bLogToDisk );
 	ini.SetValue( "Debug", "ForceLogFlush",						m_bForceLogFlush );
 	ini.SetValue( "Debug", "ShowLogOutput",						m_bShowLogOutput );
@@ -845,15 +854,15 @@ CString PrefsManager::GetSoundDrivers()
 
 int PrefsManager::GetCoinMode()
 {
-	if( m_bEventMode && m_iCoinMode == COIN_PAY )
-		return COIN_FREE; 
+	if( (m_bEventMode || m_bArcadeEventMode) && m_iCoinMode == COIN_PAY )
+		return COIN_FREE;
 	else 
 		return m_iCoinMode; 
 }
 
 PrefsManager::Premium	PrefsManager::GetPremium() 
 { 
-	if(m_bEventMode) 
+	if(m_bEventMode || m_bArcadeEventMode) 
 		return NO_PREMIUM; 
 	else 
 		return m_Premium; 

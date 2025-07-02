@@ -11,12 +11,14 @@
 #include "ActorUtil.h"
 #include "LightsManager.h"
 #include "CommonMetrics.h"
+#include "RageLog.h"
 
 
 #define ICON_GAIN_FOCUS_COMMAND		THEME->GetMetric (m_sName,"IconGainFocusCommand")
 #define ICON_LOSE_FOCUS_COMMAND		THEME->GetMetric (m_sName,"IconLoseFocusCommand")
 #define DISABLED_COLOR				THEME->GetMetricC(m_sName,"DisabledColor")
 
+bool initialflag=false;
 
 ScreenSelectStyle::ScreenSelectStyle( CString sClassName ) : ScreenSelect( sClassName )
 {
@@ -52,7 +54,7 @@ ScreenSelectStyle::ScreenSelectStyle( CString sClassName ) : ScreenSelect( sClas
 		}
 	
 
-		//
+/*		//
 		// Load Picture
 		//
 		CString sPictureElementName = ssprintf("%s picture%d",m_sName.c_str(),i+1);
@@ -64,7 +66,7 @@ ScreenSelectStyle::ScreenSelectStyle( CString sClassName ) : ScreenSelect( sClas
 			m_sprPicture[i].SetDiffuse( RageColor(1,1,1,0) );
 			this->AddChild( &m_sprPicture[i] );
 		}
-
+*/
 
 		//
 		// Load info
@@ -78,8 +80,38 @@ ScreenSelectStyle::ScreenSelectStyle( CString sClassName ) : ScreenSelect( sClas
 			m_sprInfo[i].SetDiffuse( RageColor(1,1,1,0) );
 			this->AddChild( &m_sprInfo[i] );
 		}
+
+		// load char and pad
+		for( unsigned j=0; j<2; j++ )
+		{
+			CString sPadElementName = ssprintf("%s pad%d p%d",m_sName.c_str(),i+1,j+1);
+			CString sPadPath = THEME->GetPathToG(sPadElementName);
+
+			CString sCharElementName = ssprintf("%s char%d p%d",m_sName.c_str(),i+1,j+1);
+			CString sCharPath = THEME->GetPathToG(sCharElementName);
+
+			if( sPadPath != "" )
+			{
+				m_sprPad[i][j].SetName( ssprintf("Pad%dP%d",i+1,j+1));
+				m_sprPad[i][j].Load( sPadPath );
+				m_sprPad[i][j].SetDiffuse( RageColor(1,1,1,0) );
+				this->AddChild( &m_sprPad[i][j] );
+			}
+
+			if( sCharPath != "" )
+			{
+				m_sprChar[i][j].SetName( ssprintf("Char%dP%d",i+1,j+1));
+				m_sprChar[i][j].Load( sCharPath );
+				m_sprChar[i][j].SetDiffuse( RageColor(1,1,1,0) );
+				this->AddChild( &m_sprChar[i][j] );
+			}
+		}
 	}
 
+	initialflag = true;
+
+	//find the player which pressed start
+	FOREACH_HumanPlayer( p ) m_currentplayer = p;
 
 	m_sprWarning.SetName( "Warning" );
 	m_sprWarning.Load( THEME->GetPathToG(m_sName+" warning") );
@@ -91,12 +123,11 @@ ScreenSelectStyle::ScreenSelectStyle( CString sClassName ) : ScreenSelect( sClas
 		
 
 
-	// fix Z ordering of Picture and Info so that they draw on top
+//	// fix Z ordering of Picture and Info so that they draw on top
+//	for( i=0; i<this->m_aModeChoices.size(); i++ )
+//		this->MoveToTail( &m_sprPicture[i] );
 	for( i=0; i<this->m_aModeChoices.size(); i++ )
-		this->MoveToTail( &m_sprPicture[i] );
-	for( i=0; i<this->m_aModeChoices.size(); i++ )
-		this->MoveToTail( &m_sprInfo[i] );
-
+		this->MoveToTail( &m_sprInfo[i] ); 
 
 	this->UpdateSelectableChoices();
 
@@ -150,6 +181,7 @@ void ScreenSelectStyle::MenuLeft( PlayerNumber pn )
 		return;
 
 	BeforeChange();
+	m_currentplayer = pn;
 	m_iSelection = iSwitchToIndex;
 	m_soundChange.Play();
 	AfterChange();
@@ -171,6 +203,7 @@ void ScreenSelectStyle::MenuRight( PlayerNumber pn )
 		return;
 
 	BeforeChange();
+	m_currentplayer = pn;
 	m_iSelection = iSwitchToIndex;
 	m_soundChange.Play();
 	AfterChange();
@@ -204,9 +237,14 @@ void ScreenSelectStyle::MenuStart( PlayerNumber pn )
 	}
 	OFF_COMMAND( m_sprExplanation );
 	OFF_COMMAND( m_sprWarning );
-	OFF_COMMAND( m_sprPicture[m_iSelection] );
+//	OFF_COMMAND( m_sprPicture[m_iSelection] );
 	OFF_COMMAND( m_sprInfo[m_iSelection] );
 	OFF_COMMAND( m_sprPremium );
+
+	m_sprChar[m_iSelection][m_currentplayer].SetName("Char");
+	m_sprPad[m_iSelection][m_currentplayer].SetName("Pad");
+	OFF_COMMAND(m_sprChar[m_iSelection][m_currentplayer]);
+	OFF_COMMAND(m_sprPad[m_iSelection][m_currentplayer]);
 }
 
 int ScreenSelectStyle::GetSelectionIndex( PlayerNumber pn )
@@ -264,24 +302,54 @@ void ScreenSelectStyle::BeforeChange()
 	// dim/hide old selection
 	m_sprIcon[m_iSelection].Command( ICON_LOSE_FOCUS_COMMAND );
 	m_textIcon[m_iSelection].Command( ICON_LOSE_FOCUS_COMMAND );
-	m_sprPicture[m_iSelection].StopTweening();
+//	m_sprPicture[m_iSelection].StopTweening();
 	m_sprInfo[m_iSelection].StopTweening();
-	m_sprPicture[m_iSelection].SetDiffuse( RageColor(1,1,1,0) );
+//	m_sprPicture[m_iSelection].SetDiffuse( RageColor(1,1,1,0) );
 	m_sprInfo[m_iSelection].SetDiffuse( RageColor(1,1,1,0) );
-	m_sprPicture[m_iSelection].SetGlow( RageColor(1,1,1,0) );
+//	m_sprPicture[m_iSelection].SetGlow( RageColor(1,1,1,0) );
 	m_sprInfo[m_iSelection].SetGlow( RageColor(1,1,1,0) );
+	m_sprChar[m_iSelection][m_currentplayer].StopTweening();
+	m_sprChar[m_iSelection][m_currentplayer].SetDiffuse( RageColor(1,1,1,0) );
+	m_sprChar[m_iSelection][m_currentplayer].StopTweening();
+	m_sprChar[m_iSelection][m_currentplayer].SetGlow( RageColor(1,1,1,0) );
+	m_sprPad[m_iSelection][m_currentplayer].StopTweening();
+	m_sprPad[m_iSelection][m_currentplayer].SetDiffuse( RageColor(1,1,1,0) );
+	m_sprPad[m_iSelection][m_currentplayer].StopTweening();
+	m_sprPad[m_iSelection][m_currentplayer].SetGlow( RageColor(1,1,1,0) );
 }
 
 void ScreenSelectStyle::AfterChange()
 {
 	m_sprIcon[m_iSelection].Command( ICON_GAIN_FOCUS_COMMAND );
 	m_textIcon[m_iSelection].Command( ICON_GAIN_FOCUS_COMMAND );
-	m_sprPicture[m_iSelection].SetDiffuse( RageColor(1,1,1,1) );
+//	m_sprPicture[m_iSelection].SetDiffuse( RageColor(1,1,1,1) );
 	m_sprInfo[m_iSelection].SetDiffuse( RageColor(1,1,1,1) );
-	m_sprPicture[m_iSelection].SetZoom( 1 );
+//	m_sprPicture[m_iSelection].SetZoom( 1 );
 	m_sprInfo[m_iSelection].SetZoom( 1 );
-	SET_XY_AND_ON_COMMAND( m_sprPicture[m_iSelection] );
+	m_sprChar[m_iSelection][m_currentplayer].SetDiffuse( RageColor(1,1,1,1) );
+	m_sprChar[m_iSelection][m_currentplayer].SetZoom( 1 );
+	m_sprPad[m_iSelection][m_currentplayer].SetDiffuse( RageColor(1,1,1,1) );
+	m_sprPad[m_iSelection][m_currentplayer].SetZoom( 1 );
+//	SET_XY_AND_ON_COMMAND( m_sprPicture[m_iSelection] );
 	SET_XY_AND_ON_COMMAND( m_sprInfo[m_iSelection] );
+	if (initialflag)
+	{
+		initialflag = false;
+		SET_XY( m_sprChar[m_iSelection][m_currentplayer] );
+		m_sprChar[m_iSelection][m_currentplayer].SetName( "CharInitial");
+		ON_COMMAND( m_sprChar[m_iSelection][m_currentplayer] );
+		m_sprChar[m_iSelection][m_currentplayer].SetName( ssprintf("Char%dP%d",m_iSelection+1,m_currentplayer+1));
+		
+		SET_XY( m_sprPad[m_iSelection][m_currentplayer] );
+		m_sprPad[m_iSelection][m_currentplayer].SetName( "PadInitial");
+		ON_COMMAND( m_sprPad[m_iSelection][m_currentplayer] );
+		m_sprPad[m_iSelection][m_currentplayer].SetName( ssprintf("Pad%dP%d",m_iSelection+1,m_currentplayer+1));
+		
+	} else {
+		SET_XY_AND_ON_COMMAND( m_sprChar[m_iSelection][m_currentplayer] );
+		SET_XY_AND_ON_COMMAND( m_sprPad[m_iSelection][m_currentplayer] );
+	}
+
 }
 
 /*

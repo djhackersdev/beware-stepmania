@@ -34,8 +34,9 @@ ScreenMusicScroll::ScreenMusicScroll( CString sClassName ) : ScreenAttract( sCla
 		
 		Song* pSong = arraySongs[i];
 		bt->LoadFromFont( THEME->GetPathToF("ScreenMusicScroll titles") );
-		bt->SetText( pSong->GetFullDisplayTitle(), pSong->GetFullTranslitTitle() );
+		bt->SetText( pSong->GetFullTranslitTitle(), pSong->GetFullTranslitTitle() );
 		bt->SetDiffuse( SONGMAN->GetSongColor(pSong) );
+		bt->SetShadowLength( 0 );
 		bt->SetZoom( TEXT_ZOOM );
 
 		this->AddChild( bt );
@@ -62,7 +63,7 @@ ScreenMusicScroll::ScreenMusicScroll( CString sClassName ) : ScreenAttract( sCla
 	this->MoveToTail( &m_Out );		// put it in the back so it covers up the stuff we just added
 
 	this->ClearMessageQueue( SM_BeginFadingOut );	// ignore ScreenAttract's SecsToShow
-	this->PostScreenMessage( SM_BeginFadingOut, 0.2f * i + 3.0f );
+	this->PostScreenMessage( SM_BeginFadingOut, SCROLL_DELAY * i + 3.0f );
 
 	SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("music scroll") );
 }

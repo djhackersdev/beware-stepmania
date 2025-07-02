@@ -81,6 +81,7 @@ static const CString SortOrderNames[NUM_SORT_ORDERS] = {
 	"NONSTOP",
 	"ONI",
 	"ENDLESS",
+	"DEFAULTLIST",
 	"ROULETTE"
 };
 XToString( SortOrder );

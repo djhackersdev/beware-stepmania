@@ -8,6 +8,7 @@
 #include "RageTextureManager.h"
 #include "Course.h"
 #include "Character.h"
+#include "RageTimer.h"
 
 CachedThemeMetricB SCROLL_RANDOM		("Banner","ScrollRandom");
 CachedThemeMetricB SCROLL_ROULETTE		("Banner","ScrollRoulette");
@@ -26,6 +27,8 @@ Banner::Banner()
 		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Common","fallback banner")) );
 		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","roulette")) );
 		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","random")) );
+		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","abc")) );
+		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","group")) );
 		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","Sort")) );
 		TEXTUREMAN->CacheTexture( SongBannerTexture(THEME->GetPathG("Banner","Mode")) );
 	}
@@ -53,9 +56,10 @@ void Banner::Update( float fDeltaTime )
 {
 	Sprite::Update( fDeltaTime );
 
-	if( m_bScrolling )
+	if( m_bScrolling)
 	{
-        m_fPercentScrolling += fDeltaTime/2;
+//        m_fPercentScrolling += fDeltaTime/2;
+		m_fPercentScrolling = RageTimer::GetTimeSinceStart()/4;
 		m_fPercentScrolling -= (int)m_fPercentScrolling;
 
 		const RectF *pTextureRect = m_pTexture->GetTextureCoordRect(0);
@@ -68,6 +72,9 @@ void Banner::Update( float fDeltaTime )
 			1+m_fPercentScrolling, pTextureRect->top,		// top right
 		};
 		Sprite::SetCustomTextureCoords( fTexCoords );
+		
+		double intensity = (sin(RageTimer::GetTimeSinceStart() * 6.263) * 0.125) + 0.875;
+		Sprite::SetDiffuseColor(RageColor(intensity,intensity,intensity,1));
 	}
 }
 
@@ -163,15 +170,26 @@ void Banner::LoadFallback()
 void Banner::LoadRoulette()
 {
 	Load( THEME->GetPathToG("Banner roulette") );
-	m_bScrolling = (bool)SCROLL_RANDOM;
+	m_bScrolling = (bool)SCROLL_ROULETTE;
 }
 
 void Banner::LoadRandom()
 {
 	Load( THEME->GetPathToG("Banner random") );
+	m_bScrolling = (bool)SCROLL_RANDOM;
+}
+
+void Banner::LoadAbc()
+{
+	Load( THEME->GetPathToG("Banner abc") );
 	m_bScrolling = (bool)SCROLL_ROULETTE;
 }
 
+void Banner::LoadGroup()
+{
+	Load( THEME->GetPathToG("Banner group") );
+	m_bScrolling = (bool)SCROLL_ROULETTE;
+}
 
 /*
  * (c) 2001-2004 Chris Danford

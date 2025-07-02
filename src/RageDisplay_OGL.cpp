@@ -1267,19 +1267,25 @@ void RageDisplay_OGL::DrawLineStripInternal( const RageSpriteVertex v[], int iNu
 {
 	TurnOffHardwareVBO();
 
-	if( !GetVideoModeParams().bSmoothLines )
-	{
-		/* Fall back on the generic polygon-based line strip. */
-		RageDisplay::DrawLineStripInternal(v, iNumVerts, LineWidth );
-		return;
-	}
+//	if( !GetVideoModeParams().bSmoothLines )
+//	{
+//		/* Fall back on the generic polygon-based line strip. */
+//		RageDisplay::DrawLineStripInternal(v, iNumVerts, LineWidth );
+//		return;
+//	}
+
+//the openGL non smooth lines look better than the "generic" ones, because they are
+//"constant thickness" - the generic ones alternate between 1 and 2 pixels or so and look horrible
+//i fixed this. --beware
 
 	SendCurrentMatrices();
 
 	/* Draw a nice AA'd line loop.  One problem with this is that point and line
 	 * sizes don't always precisely match, which doesn't look quite right.
 	 * It's worth it for the AA, though. */
-	glEnable(GL_LINE_SMOOTH);
+
+	//if (GetVideoModeParams().bSmoothLines)
+	//	glEnable(GL_LINE_SMOOTH);
 
 	/* Our line width is wrt the regular internal SCREEN_WIDTHxSCREEN_HEIGHT screen,
 	 * but these width functions actually want raster sizes (that is, actual pixels).
@@ -1303,7 +1309,8 @@ void RageDisplay_OGL::DrawLineStripInternal( const RageSpriteVertex v[], int iNu
 	SetupVertices( v, iNumVerts );
 	glDrawArrays( GL_LINE_STRIP, 0, iNumVerts );
 
-	glDisable(GL_LINE_SMOOTH);
+	//if (GetVideoModeParams().bSmoothLines)
+	//	glDisable(GL_LINE_SMOOTH);
 
 	/* Round off the corners.  This isn't perfect; the point is sometimes a little
 	 * larger than the line, causing a small bump on the edge.  Not sure how to fix

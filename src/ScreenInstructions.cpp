@@ -28,7 +28,7 @@ ScreenInstructions::ScreenInstructions( CString sName ) : ScreenWithMenuElements
 		FOREACH_HumanPlayer(p)
 			easiestDifficulty = min( easiestDifficulty, GAMESTATE->m_PreferredDifficulty[p] );
 
-		if( easiestDifficulty > DIFFICULTY_EASY )
+		if( easiestDifficulty > DIFFICULTY_MEDIUM )
 		{
 			HandleScreenMessage( SM_GoToNextScreen );
 			return;

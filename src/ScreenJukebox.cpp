@@ -12,9 +12,11 @@
 #include "ScreenAttract.h"
 #include "RageUtil.h"
 #include "UnlockSystem.h"
+#include "RandomNumber.h"
 
 // HACK: This belongs in ScreenDemonstration
 #define DIFFICULTIES_TO_SHOW		THEME->GetMetric ("ScreenDemonstration","DifficultiesToShow")
+#define SONGS_TO_SHOW			THEME->GetMetric ("ScreenDemonstration","SongsToShow")
 
 const ScreenMessage	SM_NotesEnded				= ScreenMessage(SM_User+10);	// MUST be same as in ScreenGameplay
 
@@ -58,6 +60,9 @@ bool ScreenJukebox::SetSong( bool bDemonstration )
 	if( vDifficultiesToShow.empty() )
 		vDifficultiesToShow.push_back( DIFFICULTY_EASY );
 
+	CStringArray SongNames;
+	split( SONGS_TO_SHOW, ",", SongNames );
+
 	//
 	// Search for a Song and Steps to play during the demo
 	//
@@ -66,7 +71,8 @@ bool ScreenJukebox::SetSong( bool bDemonstration )
 		if( vSongs.size() == 0 )
 			return true;
 
-		Song* pSong = vSongs[rand()%vSongs.size()];
+		int index = randomnumber( vSongs.size() );
+		Song* pSong = vSongs[index];
 
 		if( !pSong->HasMusic() )
 			continue;	// skip
@@ -83,6 +89,15 @@ bool ScreenJukebox::SetSong( bool bDemonstration )
 
 		if( !PREFSMAN->m_bAutogenSteps && pSteps->IsAutogen())
 			continue;	// skip
+		
+		int j = 0;
+		for( unsigned i=0; i<SongNames.size(); i++ )
+		{
+			if (!strcmp(pSong->GetFullTranslitTitle(),SongNames[i]))
+				j = 1;
+		}
+		if (!j && SongNames.size())
+			continue;
 
 		// Found something we can use!
 		GAMESTATE->m_pCurSong = pSong;

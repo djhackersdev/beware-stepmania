@@ -173,6 +173,24 @@ void FadingBanner::LoadRandom()
 	m_Banner[GetBackIndex()].LoadRandom();
 }
 
+void FadingBanner::LoadAbc()
+{
+	if( m_Banner[GetBackIndex()].GetTexturePath() == THEME->GetPathToG("Banner abc") )
+		return;
+
+	BeforeChange();
+	m_Banner[GetBackIndex()].LoadAbc();
+}
+
+void FadingBanner::LoadGroup()
+{
+	if( m_Banner[GetBackIndex()].GetTexturePath() == THEME->GetPathToG("Banner group") )
+		return;
+
+	BeforeChange();
+	m_Banner[GetBackIndex()].LoadGroup();
+}
+
 void FadingBanner::LoadFallback()
 {
 	BeforeChange();

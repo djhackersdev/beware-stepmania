@@ -7,7 +7,7 @@
 #include "SongManager.h"
 #include "RageTextureManager.h"
 #include "ActorUtil.h"
-
+#include "RageLog.h"
 
 CachedThemeMetric ARTIST_PREPEND_STRING			("TextBanner","ArtistPrependString");
 CachedThemeMetric TWO_LINES_TITLE_COMMAND		("TextBanner","TwoLinesTitleCommand");
@@ -16,6 +16,8 @@ CachedThemeMetric TWO_LINES_ARTIST_COMMAND		("TextBanner","TwoLinesArtistCommand
 CachedThemeMetric THREE_LINES_TITLE_COMMAND		("TextBanner","ThreeLinesTitleCommand");
 CachedThemeMetric THREE_LINES_SUBTITLE_COMMAND	("TextBanner","ThreeLinesSubtitleCommand");
 CachedThemeMetric THREE_LINES_ARTIST_COMMAND	("TextBanner","ThreeLinesArtistCommand");
+#define CARD_X		THEME->GetMetricF("TextBanner","CardX")
+#define CARD_Y		THEME->GetMetricF("TextBanner","CardY")
 
 void TextBanner::Init()
 {
@@ -46,6 +48,10 @@ void TextBanner::Init()
 	m_textArtist.LoadFromFont( THEME->GetPathToF("TextBanner") );
 	SET_XY_AND_ON_COMMAND( m_textArtist );
 	this->AddChild( &m_textArtist );
+
+	m_sprCard.SetName("Card");
+	m_sprCard.SetXY(CARD_X,CARD_Y);
+	this->AddChild( &m_sprCard );
 }
 
 TextBanner::TextBanner()
@@ -60,6 +66,8 @@ void TextBanner::LoadFromString(
 	CString sDisplayArtist, CString sTranslitArtist )
 {
 	Init();
+
+	m_sprCard.SetZoom(0);
 
 	bool bTwoLines = sDisplaySubTitle.size() == 0;
 
@@ -84,6 +92,16 @@ void TextBanner::LoadFromString(
 void TextBanner::LoadFromSong( const Song* pSong )
 {
 	Init();
+
+	CString temp = pSong ? (pSong->GetSongDir() + "card.png") : CString("");
+	m_bHasCard = IsAFile(temp);
+	if (m_bHasCard)
+	{
+		LoadFromString( CString(""), CString(""), CString(""), CString(""), CString(""), CString(""));
+		m_sprCard.SetZoom(1);
+		m_sprCard.Load(temp);
+		return;
+	}
 
 	CString sDisplayTitle = pSong ? pSong->GetDisplayMainTitle() : CString("");
 	CString sTranslitTitle = pSong ? pSong->GetTranslitMainTitle() : CString("");

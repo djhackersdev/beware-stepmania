@@ -37,11 +37,17 @@ public:
 	BitmapText			m_textSectionName;
 	// for TYPE_ROULETTE
 	BitmapText			m_textRoulette;
+	Sprite				m_sprCard;
 
+	bool				m_bHasCard;
 	// for a TYPE_MUSIC
 	Sprite				m_sprSongBar;
 	WheelNotifyIcon		m_WheelNotifyIcon;
 	TextBanner			m_TextBanner;
+	
+	//for addition blending to produce brighter blue color
+	TextBanner			m_TextBanner2;
+	
 	GradeDisplay		m_GradeDisplay[NUM_PLAYERS];
 
 	// for TYPE_COURSE

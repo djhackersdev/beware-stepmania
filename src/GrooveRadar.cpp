@@ -14,10 +14,12 @@
 #define LABEL_ON_DELAY				THEME->GetMetricF("GrooveRadar","LabelOnDelay")
 #define LABEL_ON_COMMAND_POST_DELAY THEME->GetMetric ("GrooveRadar","LabelOnCommandPostDelay")
 #define DISABLE_RADAR				THEME->GetMetricI("GrooveRadar","DisableRadar")
+#define BASE_ON_COMMAND			THEME->GetMetric ("GrooveRadar","BaseOnCommand")
+#define BASE_OFF_COMMAND			THEME->GetMetric ("GrooveRadar","BaseOffCommand")
 
 float RADAR_VALUE_ROTATION( int iValueIndex ) {	return PI/2 + PI*2 / 5.0f * iValueIndex; }
 
-const float RADAR_EDGE_WIDTH	= 2;
+const float RADAR_EDGE_WIDTH	= 1;
 static const int NUM_SHOWN_RADAR_CATEGORIES = 5;
 
 GrooveRadar::GrooveRadar()
@@ -192,18 +194,20 @@ void GrooveRadar::GrooveRadarValueMap::DrawPrimitives()
 
 void GrooveRadar::GrooveRadarValueMap::TweenOnScreen()
 {
-	SetZoom( 0.5f );
-	SetRotationZ( 720 );
-	BeginTweening( 0.6f );
-	SetZoom( 1 );
-	SetRotationZ( 0 );
+//	SetZoom( 0.5f );
+//	SetRotationZ( 720 );
+//	BeginTweening( 0.6f );
+//	SetZoom( 1 );
+//	SetRotationZ( 0 );
+	Command( BASE_ON_COMMAND );
 }
 
 void GrooveRadar::GrooveRadarValueMap::TweenOffScreen()
 {
-	BeginTweening( 0.6f );
-	SetRotationZ( 180*4 );
-	SetZoom( 0 );
+//	BeginTweening( 0.6f );
+//	SetRotationZ( 180*4 );
+//	SetZoom( 0 );
+	Command( BASE_OFF_COMMAND );
 }
 
 /*

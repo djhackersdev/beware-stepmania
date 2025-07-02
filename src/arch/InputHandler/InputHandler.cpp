@@ -1,18 +1,29 @@
 #include "global.h"
 #include "InputFilter.h"
 #include "InputHandler.h"
+#include "PrefsManager.h"
 
 void InputHandler::UpdateTimer()
 {
 	m_LastUpdate.Touch();
 }
 
+map< int, RageTimer > mLastHit;
+
 void InputHandler::ButtonPressed( DeviceInput di, bool Down )
 {
 	if( di.ts.IsZero() )
 		di.ts = m_LastUpdate.Half();
 
-	INPUTFILTER->ButtonPressed( di, Down );
+	if ( !Down )
+		INPUTFILTER->ButtonPressed( di, Down );
+	else
+		if ( ( mLastHit.find(di.button) == mLastHit.end() ) || 
+			( mLastHit[di.button].PeekDeltaTime() > PREFSMAN->m_fDebounceTime ) ) 
+		{
+			INPUTFILTER->ButtonPressed( di, Down );
+			mLastHit[di.button].Touch();
+		}
 }
 
 /*

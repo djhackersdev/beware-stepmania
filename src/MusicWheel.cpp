@@ -23,7 +23,7 @@
 #include "CourseUtil.h"
 #include "Foreach.h"
 #include "Style.h"
-
+#include "RandomNumber.h"
 
 #define FADE_SECONDS				THEME->GetMetricF("MusicWheel","FadeSeconds")
 CachedThemeMetricF SWITCH_SECONDS	("MusicWheel","SwitchSeconds");
@@ -39,6 +39,7 @@ CachedThemeMetricF WHEEL_3D_RADIUS	("MusicWheel","Wheel3DRadius");
 CachedThemeMetricF CIRCLE_PERCENT	("MusicWheel","CirclePercent");
 #define NUM_SECTION_COLORS			THEME->GetMetricI("MusicWheel","NumSectionColors")
 #define SECTION_COLORS( i )			THEME->GetMetricC("MusicWheel",ssprintf("SectionColor%d",i+1))
+#define GROUPSECTIONCOLOR                         THEME->GetMetricC("MusicWheel","GroupSectionColor")
 #define SONG_REAL_EXTRA_COLOR		THEME->GetMetricC("MusicWheel","SongRealExtraColor")
 #define SORT_MENU_COLOR				THEME->GetMetricC("MusicWheel","SortMenuColor")
 #define SHOW_ROULETTE				THEME->GetMetricB("MusicWheel","ShowRoulette")
@@ -54,22 +55,35 @@ CachedThemeMetricI  NUM_WHEEL_ITEMS_METRIC	("MusicWheel","NumWheelItems");
 #define MODE_MENU_ACTIONS			THEME->GetMetric ("MusicWheel","ModeMenuActions")
 #define WHEEL_ITEM_ON_DELAY_CENTER	THEME->GetMetricF("MusicWheel","WheelItemOnDelayCenter")
 #define WHEEL_ITEM_ON_DELAY_OFFSET	THEME->GetMetricF("MusicWheel","WheelItemOnDelayOffset")
+#define WHEEL_ITEM_ON_DELAY_OFFSET_SORT	THEME->GetMetricF("MusicWheel","WheelItemOnDelayOffsetSort")
 #define WHEEL_ITEM_OFF_DELAY_CENTER	THEME->GetMetricF("MusicWheel","WheelItemOffDelayCenter")
 #define WHEEL_ITEM_OFF_DELAY_OFFSET	THEME->GetMetricF("MusicWheel","WheelItemOffDelayOffset")
+#define WHEEL_ITEM_OFF_DELAY_OFFSET_SORT	THEME->GetMetricF("MusicWheel","WheelItemOffDelayOffsetSort")
+#define SORT_CHANGE_HURRY		THEME->GetMetricF("MusicWheel","SortChangeHurry")
+#define SORT_CHANGE_OFF_DURATION	THEME->GetMetricF("MusicWheel","SortChangeOffDuration")
+#define DEFAULTLIST_ENABLED		THEME->GetMetricB("SongManager","DefaultListEnabled")
+#define DEFAULTLIST_NUMENTRIES		THEME->GetMetricI("SongManager","DefaultListNumEntries")
+#define DEFAULTLIST_ENTRY( X )		THEME->GetMetric ("SongManager",ssprintf("DefaultList%d", X+1))
+#define COURSELIST_ENABLED( Y )		THEME->GetMetricB ("SongManager",ssprintf("%sListEnabled", Y ))
+#define COURSELIST_NUMENTRIES( Y )	THEME->GetMetricI ("SongManager",ssprintf("%sListNumEntries", Y ))
+#define COURSELIST_ENTRYPATH( Y , X )		THEME->GetMetric ("SongManager",ssprintf("%sList%dPath",Y,X+1))
+#define COURSELIST_ENTRYCOLOR( Y , X )		THEME->GetMetricC ("SongManager",ssprintf("%sList%dColor",Y,X+1))
+
 // leaving this one under ScreenSelectMusic because that is the only place it takes effect anyway.
 #define DEFAULT_SORT				THEME->GetMetric ("ScreenSelectMusic","DefaultSort")
 
 			
 const int MAX_WHEEL_SOUND_SPEED = 15;
 
+int chosenrandom = 0;
 
 static const SortOrder SORT_ORDERS[] =
 {
-	SORT_GROUP, 
-	SORT_TITLE, 
-	SORT_BPM, 
-	SORT_MOST_PLAYED, 
-	SORT_ARTIST,
+	SORT_GROUP,
+	SORT_TITLE,
+	SORT_BPM,
+	SORT_MOST_PLAYED,
+	SORT_DEFAULTLIST,
 };
 // use ARRAYSIZE(SortOrder)
 
@@ -134,6 +148,10 @@ void MusicWheel::Load()
 
 	if( GAMESTATE->IsExtraStage() ||  GAMESTATE->IsExtraStage2() )
 	{
+		//if extra stage, and defaultlist is used, set defaultlist mode
+		if (DEFAULT_SORT == "DEFAULTLIST")
+			GAMESTATE->m_SortOrder = SORT_DEFAULTLIST;
+
 		// make the preferred group the group of the last song played.
 		if( GAMESTATE->m_sPreferredGroup==GROUP_ALL_MUSIC && !PREFSMAN->m_bPickExtraStage )
 		{
@@ -417,7 +435,8 @@ void MusicWheel::GetSongList(vector<Song*> &arraySongs, SortOrder so, CString sP
 void MusicWheel::BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItemDatas, SortOrder so )
 {
 	unsigned i;
-
+	const SortOrder SORT_ROULETTE_DEFAULTLIST=NUM_SORT_ORDERS;	
+	if ((so == SORT_ROULETTE) && DEFAULTLIST_ENABLED) so = SORT_ROULETTE_DEFAULTLIST;
 	switch( so )
 	{
 	case SORT_SORT_MENU:
@@ -508,6 +527,7 @@ void MusicWheel::BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItemDatas
 			break;
 		case SORT_BPM:
 			SongUtil::SortSongPointerArrayByBPM( arraySongs );
+			bUseSections = false; //like ddr. -beware
 			break;
 		case SORT_MOST_PLAYED:
 			if( (int) arraySongs.size() > MOST_PLAYED_SONGS_TO_SHOW )
@@ -570,6 +590,7 @@ void MusicWheel::BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItemDatas
 				if( sThisSection != sLastSection)	// new section, make a section item
 				{
 					RageColor colorSection = (so==SORT_GROUP) ? SONGMAN->GetGroupColor(pSong->m_sGroupName) : SECTION_COLORS(iSectionColorIndex);
+                                        if (so==SORT_GROUP) colorSection = GROUPSECTIONCOLOR; //orange sections in extreme -beware
 					iSectionColorIndex = (iSectionColorIndex+1) % NUM_SECTION_COLORS;
 					arrayWheelItemDatas.push_back( WheelItemData(TYPE_SECTION, NULL, sThisSection, NULL, colorSection, SORT_INVALID) );
 					sLastSection = sThisSection;
@@ -663,6 +684,38 @@ void MusicWheel::BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItemDatas
 
 		arrayWheelItemDatas.clear();	// clear out the previous wheel items 
 
+		CString sCourseMode = "";
+		bool bUseCourselist = false;
+		if (COURSELIST_ENABLED("Course") && (apCourses.size() > 0))
+		{
+			Course* pCourse = apCourses[0];
+			switch( pCourse->GetPlayMode() )
+			{
+				case PLAY_MODE_ONI:	sCourseMode = "Oni";		break;
+				case PLAY_MODE_NONSTOP:	sCourseMode = "Nonstop";	break;
+				case PLAY_MODE_ENDLESS:	sCourseMode = "Endless";	break;
+			}
+			if (strcmp(sCourseMode,"")) if (COURSELIST_ENABLED(sCourseMode.c_str()))
+				bUseCourselist = true;
+		}
+		if (bUseCourselist)
+		{
+			for( unsigned a=0; a<COURSELIST_NUMENTRIES(sCourseMode.c_str()); a++ )
+			{
+				CString sEntryPath=COURSELIST_ENTRYPATH(sCourseMode.c_str(),a);
+				for( unsigned c=0; c<apCourses.size(); c++ )	// foreach course
+				{
+					Course* pCourse = apCourses[c];
+					if (!sEntryPath.CompareNoCase(pCourse->m_sPath))
+					{
+						if( pCourse->IsPlayableIn(GAMESTATE->GetCurrentStyle()->m_StepsType) )
+							arrayWheelItemDatas.push_back( WheelItemData(TYPE_COURSE, NULL, "", pCourse, COURSELIST_ENTRYCOLOR(sCourseMode.c_str(),a), SORT_INVALID) );
+					}
+				}
+			}
+			break;
+		}
+
 		CString sLastSection = "";
 		int iSectionColorIndex = 0;
 		for( unsigned c=0; c<apCourses.size(); c++ )	// foreach course
@@ -696,6 +749,39 @@ void MusicWheel::BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItemDatas
 
             arrayWheelItemDatas.push_back( WheelItemData(TYPE_COURSE, NULL, sThisSection, pCourse, pCourse->GetColor(), SORT_INVALID) );
 		}
+		break;
+	}
+	case SORT_DEFAULTLIST:
+	case SORT_ROULETTE_DEFAULTLIST:
+	{
+		arrayWheelItemDatas.clear();	// clear out the previous wheel items 
+		arrayWheelItemDatas.reserve( 2 + DEFAULTLIST_NUMENTRIES);
+
+		vector<Song*> arraySongs;
+		GetSongList(arraySongs, so, GAMESTATE->m_sPreferredGroup );
+
+		for( unsigned j=0; j< DEFAULTLIST_NUMENTRIES; j++ )
+		{
+			CString wantname = DEFAULTLIST_ENTRY( j );
+			ASSERT(wantname);
+			for( unsigned i=0; i< arraySongs.size(); i++ )
+			{
+				Song* pSong = arraySongs[i];
+				CString hasname = pSong->GetSongDir();
+				if (!hasname.CompareNoCase(wantname) || !pSong->m_sGroupName.CompareNoCase(wantname))
+				{
+					arrayWheelItemDatas.push_back( WheelItemData(TYPE_SONG, pSong, "", NULL, SONGMAN->GetSongColor(pSong), SORT_INVALID) );					
+				}
+			}
+		}
+
+		if( so != SORT_ROULETTE_DEFAULTLIST )
+		{
+			//always show roulette and random; this allows one to disable them in other modes but still have them here
+			//the correct order in the wheel is: random, roulette
+			arrayWheelItemDatas.push_back( WheelItemData(TYPE_RANDOM, NULL, "", NULL, RageColor(1,0,0,1), SORT_INVALID) );
+			arrayWheelItemDatas.push_back( WheelItemData(TYPE_ROULETTE, NULL, "", NULL, RageColor(1,0,0,1), SORT_INVALID) );
+		}	
 		break;
 	}
 	}
@@ -867,10 +953,18 @@ void MusicWheel::DrawItem( int i )
 		break;
 	}
 
-	if( m_WheelState == STATE_LOCKED  &&  i != NUM_WHEEL_ITEMS/2 )
-		display.m_fPercentGray = 0.5f;
-	else
-		display.m_fPercentGray = 0;
+    double f = (double) (i - NUM_WHEEL_ITEMS/2 + m_fPositionOffsetFromSelection);
+
+	//make a curve that approximates 0, 0, 0.1, 0.25, 0.5 (empirical values), and that is continuous
+    if (f < 0) f = -f;  //0  1 2   3     4
+    f = (f*f);          //0  1 4   9    16
+	f = f - 1.0;        //-1 0 3   8    15
+    if (f < 0) f = 0;   //0  0 3   8    15
+    f = f / 30;         //0  0 0.1 0.26 0.5
+
+	if( ((m_WheelState == STATE_LOCKED) || (m_WheelState == STATE_TWEENING_OFF_SCREEN))  &&  i != NUM_WHEEL_ITEMS/2 )
+		f = 1.0f - ((1.0f-f) * 0.5f);
+        display.m_fPercentGray = f;
 
 	display.Draw();
 }
@@ -886,8 +980,8 @@ void MusicWheel::UpdateScrollbar()
 	} else {
 		float size = float(NUM_WHEEL_ITEMS) / total_num_items;
 		float center = item_at / total_num_items;
-		size *= 0.5f;
-
+		size *= 0.05f; //in ddr the scrollbar thumb is this small -beware
+		if (size < 0.008f) size = 0.008f;
 		m_ScrollBar.SetPercentage( center - size, center + size );
 	}
 }
@@ -1227,6 +1321,13 @@ bool MusicWheel::NextSort()		// return true if change successful
 	++cur;
 	wrap( cur, ARRAYSIZE(SORT_ORDERS) );
 
+	// if the default sort is chosen, but it is disabled in the metrics, skip it
+	if (!DEFAULTLIST_ENABLED && (SORT_ORDERS[cur] == SORT_DEFAULTLIST))
+	{
+		++cur;
+		wrap( cur, ARRAYSIZE(SORT_ORDERS) );
+	}
+
 	// apply new sort
 	SortOrder soNew = SORT_ORDERS[cur];
 	return ChangeSort( soNew );
@@ -1235,6 +1336,7 @@ bool MusicWheel::NextSort()		// return true if change successful
 bool MusicWheel::Select()	// return true if this selection ends the screen
 {
 	LOG->Trace( "MusicWheel::Select()" );
+	chosenrandom = 0;
 
 	if( m_WheelState == STATE_ROULETTE_SLOWING_DOWN )
 		return false;
@@ -1244,7 +1346,7 @@ bool MusicWheel::Select()	// return true if this selection ends the screen
 	if( m_WheelState == STATE_ROULETTE_SPINNING )
 	{
 		m_WheelState = STATE_ROULETTE_SLOWING_DOWN;
-		m_iSwitchesLeftInSpinDown = ROULETTE_SLOW_DOWN_SWITCHES/2+1 + rand()%(ROULETTE_SLOW_DOWN_SWITCHES/2);
+		m_iSwitchesLeftInSpinDown = ROULETTE_SLOW_DOWN_SWITCHES/2+1 + randomnumber(ROULETTE_SLOW_DOWN_SWITCHES/2);
 		m_fTimeLeftInState = 0.1f;
 		return false;
 	}
@@ -1279,8 +1381,7 @@ bool MusicWheel::Select()	// return true if this selection ends the screen
 		StartRoulette();
 		return false;
 	case TYPE_RANDOM:
-		StartRandom();
-		return false;
+		chosenrandom = 1;
 	case TYPE_SONG:
 	case TYPE_PORTAL:
 		// Don't -permanently- unlock the song.  Just let them play 
@@ -1420,16 +1521,25 @@ void MusicWheel::TweenOnScreen(bool changing_sort)
 		float fThisBannerPositionOffsetFromSelection = i - NUM_WHEEL_ITEMS/2 + m_fPositionOffsetFromSelection;
 		SetItemPosition( display, fThisBannerPositionOffsetFromSelection );
 
-		COMMAND( display, "StartOn");
-		const float delay = fabsf(i-WHEEL_ITEM_ON_DELAY_CENTER) * WHEEL_ITEM_ON_DELAY_OFFSET;
-		display.BeginTweening( delay ); // sleep
-		COMMAND( display, "FinishOn");
 		if( changing_sort )
-			display.HurryTweening( 0.25f );
+		{
+			COMMAND( display, "StartOnSort");
+			const float delay = fabsf(i-WHEEL_ITEM_ON_DELAY_CENTER) * WHEEL_ITEM_ON_DELAY_OFFSET_SORT;
+			display.BeginTweening( delay ); // sleep
+			COMMAND( display, "FinishOnSort");
+			display.HurryTweening( SORT_CHANGE_HURRY );
+		}
+		else
+		{
+			COMMAND( display, "StartOn");
+			const float delay = fabsf(i-WHEEL_ITEM_ON_DELAY_CENTER) * WHEEL_ITEM_ON_DELAY_OFFSET;
+			display.BeginTweening( delay ); // sleep
+			COMMAND( display, "FinishOn");
+		}
 	}
 
 	if( changing_sort )
-		HurryTweening( 0.25f );
+		HurryTweening( SORT_CHANGE_HURRY );
 
 	m_fTimeLeftInState = GetTweenTimeLeft() + 0.100f;
 }
@@ -1445,13 +1555,13 @@ void MusicWheel::TweenOffScreen(bool changing_sort)
 	{
 		/* When changing sort, tween the overlay with the item in the center;
 		 * having it separate looks messy when we're moving fast. */
-		const float delay = fabsf(NUM_WHEEL_ITEMS/2-WHEEL_ITEM_ON_DELAY_CENTER) * WHEEL_ITEM_ON_DELAY_OFFSET;
-		m_sprSelectionOverlay.BeginTweening( delay ); // sleep
+//		const float delay = fabsf(NUM_WHEEL_ITEMS/2-WHEEL_ITEM_ON_DELAY_CENTER) * WHEEL_ITEM_ON_DELAY_OFFSET;
+//		m_sprSelectionOverlay.BeginTweening( delay ); // sleep
 		COMMAND( m_sprSelectionOverlay, "FinishOffSort");
 	} else {
 		COMMAND( m_sprSelectionOverlay, "FinishOff");
 	}
-	COMMAND( m_sprSelectionOverlay, "FinishOff");
+//	COMMAND( m_sprSelectionOverlay, "FinishOff");
 
 	m_ScrollBar.BeginTweening( 0 );
 	m_ScrollBar.BeginTweening( 0.2f, Actor::TWEEN_ACCELERATE );
@@ -1463,18 +1573,34 @@ void MusicWheel::TweenOffScreen(bool changing_sort)
 		float fThisBannerPositionOffsetFromSelection = i - NUM_WHEEL_ITEMS/2 + m_fPositionOffsetFromSelection;
 		SetItemPosition( display, fThisBannerPositionOffsetFromSelection );
 
-		COMMAND( display, "StartOff");
-		const float delay = fabsf(i-WHEEL_ITEM_OFF_DELAY_CENTER) * WHEEL_ITEM_OFF_DELAY_OFFSET;
-		display.BeginTweening( delay );	// sleep
-		COMMAND( display, "FinishOff");
 		if( changing_sort )
-			display.HurryTweening( 0.25f );
+		{
+			COMMAND( display, "StartOffSort");
+			const float delay = fabsf(i-WHEEL_ITEM_OFF_DELAY_CENTER) * WHEEL_ITEM_OFF_DELAY_OFFSET_SORT;
+			display.BeginTweening( delay );	// sleep
+			COMMAND( display, "FinishOffSort");
+			display.HurryTweening( SORT_CHANGE_HURRY );
+
+		}
+		else
+		{
+			COMMAND( display, "StartOff");
+			const float delay = fabsf(i-WHEEL_ITEM_OFF_DELAY_CENTER) * WHEEL_ITEM_OFF_DELAY_OFFSET;
+			display.BeginTweening( delay );	// sleep
+			COMMAND( display, "FinishOff");
+		}
 	}
 
 	if( changing_sort )
-		HurryTweening( 0.25f );
+		HurryTweening( SORT_CHANGE_HURRY );
 
-	m_fTimeLeftInState = GetTweenTimeLeft() + 0.100f;
+//	m_fTimeLeftInState = GetTweenTimeLeft() + 0.100f;
+
+	if( changing_sort )
+		m_fTimeLeftInState = SORT_CHANGE_OFF_DURATION;
+	else
+		m_fTimeLeftInState = 0.7f;
+		
 }
 
 void MusicWheel::Move(int n)
@@ -1536,6 +1662,7 @@ Song* MusicWheel::GetSelectedSong()
 {
 	switch( m_CurWheelItemData[m_iSelection]->m_Type )
 	{
+	case TYPE_RANDOM:
 	case TYPE_PORTAL:
 		return GetPreferredSelectionForRandomOrPortal();
 	}
@@ -1570,7 +1697,7 @@ Song *MusicWheel::GetPreferredSelectionForRandomOrPortal()
 	}
 
 	CString sPreferredGroup = m_sExpandedSectionName;
-	vector<WheelItemData> &wid = m_WheelItemDatas[GAMESTATE->m_SortOrder];
+	vector<WheelItemData> &wid = m_WheelItemDatas[(GAMESTATE->m_SortOrder == SORT_DEFAULTLIST) ? SORT_GROUP : GAMESTATE->m_SortOrder];
 
 	StepsType st = GAMESTATE->GetCurrentStyle()->m_StepsType;
 
@@ -1584,7 +1711,7 @@ Song *MusicWheel::GetPreferredSelectionForRandomOrPortal()
 		if( i == NUM_PROBES/2 )
 			vDifficultiesToRequire.clear();
 
-		int iSelection = rand() % wid.size();
+		int iSelection = randomnumber(wid.size());
 		if( wid[iSelection].m_Type != TYPE_SONG )
 			continue;
 
@@ -1595,10 +1722,12 @@ Song *MusicWheel::GetPreferredSelectionForRandomOrPortal()
 
 		if( i < 900 && pSong->IsTutorial() )
 			continue;
-
+		bool bNoDifficulties = false;
 		FOREACH( Difficulty, vDifficultiesToRequire, d )
 			if( !pSong->HasStepsTypeAndDifficulty(st,*d) )
-				continue;
+				bNoDifficulties = true;
+		if (bNoDifficulties)
+			continue;
 		return wid[iSelection].m_pSong;
 	}
 	FAIL_M( "Couldn't find any songs" );

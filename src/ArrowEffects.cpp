@@ -132,7 +132,7 @@ float ArrowGetYPos( PlayerNumber pn, int iCol, float fYOffset, float fYReverseOf
 
 	if( fEffects[PlayerOptions::EFFECT_TIPSY] > 0 )
 		f += fEffects[PlayerOptions::EFFECT_TIPSY] * ( cosf( RageTimer::GetTimeSinceStart()*1.2f + iCol*1.8f) * ARROW_SIZE*0.4f );
-	return f;
+	return floor(f);
 }
 
 float ArrowGetYOffsetFromYPos( PlayerNumber pn, int iCol, float YPos, float fYReverseOffsetPixels )

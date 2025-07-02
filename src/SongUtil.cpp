@@ -237,6 +237,7 @@ CString SongUtil::GetSectionNameFromSongAndSort( const Song* pSong, SortOrder so
 
 	switch( so )
 	{
+	case SORT_DEFAULTLIST:
 	case SORT_PREFERRED:
 		return "";
 	case SORT_GROUP:	

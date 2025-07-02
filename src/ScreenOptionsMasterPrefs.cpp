@@ -215,6 +215,7 @@ MOVE( AutogenGroupCourses,	PREFSMAN->m_bAutogenGroupCourses );
 MOVE( FastLoad,				PREFSMAN->m_bFastLoad );
 
 /* Background options */
+MOVE( EnableBGAnim,		PREFSMAN->m_bEnableBGAnim );
 MOVE( BackgroundMode,		PREFSMAN->m_BackgroundMode );
 MOVE( ShowDanger,			PREFSMAN->m_bShowDanger );
 MOVE( DancingCharacters,	PREFSMAN->m_ShowDancingCharacters );
@@ -281,7 +282,7 @@ static void SongsPerPlay( int &sel, bool ToSel, const CStringArray &choices )
 	MoveMap( sel, PREFSMAN->m_iNumArcadeStages, ToSel, mapping, ARRAYSIZE(mapping) );
 }
 MOVE( EventMode,			PREFSMAN->m_bEventMode );
-
+MOVE( ArcadeEventMode,			PREFSMAN->m_bArcadeEventMode );
 /* Machine options */
 MOVE( MenuTimer,			PREFSMAN->m_bMenuTimer );
 MOVE( ScoringType,			PREFSMAN->m_iScoringType );
@@ -456,6 +457,7 @@ static const ConfOption g_ConfOptions[] =
 	ConfOption( "Fast\nLoad",			  FastLoad,			   "OFF","ON" ),
 
 	/* Background options */
+	ConfOption( "Background\nMovies",	EnableBGAnim,		"OFF","ON" ),
 	ConfOption( "Background\nMode",		BackgroundMode,		"OFF","ANIMATIONS","VISUALIZATIONS","RANDOM MOVIES" ),
 	ConfOption( "Brightness",			BGBrightness,		"0%","10%","20%","30%","40%","50%","60%","70%","80%","90%","100%" ),
 	ConfOption( "Danger",				ShowDanger,			"HIDE","SHOW" ),
@@ -486,6 +488,7 @@ static const ConfOption g_ConfOptions[] =
 	ConfOption( "CoinModeNoHome",		CoinModeNoHome,		"PAY","FREE PLAY" ),
 	ConfOption( "Songs Per\nPlay",		SongsPerPlay,		"1","2","3","4","5","6","7" ),
 	ConfOption( "Event\nMode",			EventMode,			"OFF","ON" ),
+	ConfOption( "Arcade Event\nMode",		ArcadeEventMode,		"OFF","ON" ),
 	ConfOption( "Scoring\nType",		ScoringType,		"MAX2","5TH" ),
 	ConfOption( "Judge\nDifficulty",	JudgeDifficulty,	"1","2","3","4","5","6","7","8","JUSTICE" ),
 	ConfOption( "Life\nDifficulty",		LifeDifficulty,		"1","2","3","4","5","6","7" ),

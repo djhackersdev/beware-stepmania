@@ -20,6 +20,7 @@ public:
 protected:
 	BitmapText	m_text;
 	Sprite		m_spr;
+	Sprite		m_sprOption;
 };
 
 #endif

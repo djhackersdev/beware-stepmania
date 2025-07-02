@@ -13,9 +13,12 @@
 #define PERCENT_TOTAL_SIZE			THEME->GetMetricI(m_sName,"PercentTotalSize")
 #define PERCENT_USE_REMAINDER		THEME->GetMetricB(m_sName,"PercentUseRemainder")
 
+#define ANIMTIME 0.01666f
+
 PercentageDisplay::PercentageDisplay()
 {
 	m_pSource = NULL;
+	m_currentpoints = -1;
 }
 
 void PercentageDisplay::Load( PlayerNumber pn, StageStats* pSource, bool bAutoRefresh )
@@ -60,6 +63,28 @@ void PercentageDisplay::Update( float fDeltaTime )
 
 	if( m_bAutoRefresh )
 		Refresh();
+
+	if( PREFSMAN->m_bDancePointsForOni )
+	{
+		m_timecounter += fDeltaTime;
+		if ((m_timecounter >= ANIMTIME) || (m_Last > (m_currentpoints + 3)))
+		{
+			if (m_Last > m_currentpoints)
+			{
+				if (m_Last > (m_currentpoints + 3))
+					//screenevaluation
+					m_currentpoints = m_Last;
+				else
+					//screengameplay
+					m_currentpoints++;
+				CString sNumToDisplay = ssprintf( "%*d", DANCE_POINT_DIGITS, m_currentpoints );
+				m_textPercent.SetText( sNumToDisplay );
+			}
+			m_timecounter -= ANIMTIME;
+			if (m_timecounter < 0)
+				m_timecounter = 0;
+		}
+	}
 }
 
 void PercentageDisplay::Refresh()
@@ -93,11 +118,8 @@ void PercentageDisplay::Refresh()
 			// HACK: Use the last frame in the numbers texture as '-'
 			sNumToDisplay.Replace('-','x');
 		}
-	}
-	else
-		sNumToDisplay = ssprintf( "%*d", DANCE_POINT_DIGITS, max( 0, iActualDancePoints ) );
-
-	m_textPercent.SetText( sNumToDisplay );
+		m_textPercent.SetText( sNumToDisplay );
+	} else m_timecounter = ANIMTIME;
 }
 
 /*

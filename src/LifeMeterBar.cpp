@@ -9,7 +9,6 @@
 #include "song.h"
 #include "StageStats.h"
 
-
 //
 // Important!!!!  Do not use these macros during gameplay.  They return very slowly.  Cache them in a member.
 //
@@ -18,10 +17,14 @@ static CachedThemeMetricI METER_HEIGHT		("LifeMeterBar","MeterHeight");
 static CachedThemeMetricF DANGER_THRESHOLD	("LifeMeterBar","DangerThreshold");
 static CachedThemeMetricI NUM_CHAMBERS		("LifeMeterBar","NumChambers");
 static CachedThemeMetricI NUM_STRIPS		("LifeMeterBar","NumStrips");
-
+static CachedThemeMetricI NUM_STRIPS_HOT_	("LifeMeterBar","NumStripsHot");
 
 const float FAIL_THRESHOLD = 0;
 
+const int Z_OFFSET=50;
+//the beginner helpers normally interfere with the lifemeters, Z buffer bug -beware
+
+int NUM_STRIPS_HOT;
 
 class LifeMeterStream : public Actor
 {
@@ -33,12 +36,14 @@ public:
 		DANGER_THRESHOLD.Refresh();
 		NUM_CHAMBERS.Refresh();
 		NUM_STRIPS.Refresh();
-
+		NUM_STRIPS_HOT_.Refresh();
 
 		bool bExtra = GAMESTATE->IsExtraStage()||GAMESTATE->IsExtraStage2();
 
+		NUM_STRIPS_HOT = bExtra ? NUM_STRIPS : NUM_STRIPS_HOT_;
+
 		m_quadMask.SetDiffuse( RageColor(0,0,0,1) );
-		m_quadMask.SetZ( 1 );
+		m_quadMask.SetZ( 1+Z_OFFSET );
 		m_quadMask.SetBlendMode( BLEND_NO_EFFECT );
 		m_quadMask.SetUseZBuffer( true );
 
@@ -106,6 +111,8 @@ public:
 	{
 		if( GAMESTATE->IsPlayerEnabled(m_PlayerNumber) )
 		{
+			m_sprStreamNormal.SetZ( 0+Z_OFFSET );
+			m_quadMask.SetZ( 1+Z_OFFSET );
 			DrawMask( m_fPercent );		// this is the "right endcap" to the life
 			
 			const float fChamberWidthInPercent = 1.0f/NUM_CHAMBERS;
@@ -117,12 +124,39 @@ public:
 			float fPercentOffset = fmodf( GAMESTATE->m_fSongBeat/4+1000, fPercentBetweenStrips );
 			ASSERT( fPercentOffset >= 0  &&  fPercentOffset <= fPercentBetweenStrips );
 
-			for( float f=fPercentOffset+1; f>=0; f-=fPercentBetweenStrips )
-			{
-				DrawMask( f );
-				DrawStrip( f );
-			}
+			m_sprStreamHot.SetZ( 0+Z_OFFSET );
 
+			if ((NUM_STRIPS_HOT == 4) && (NUM_STRIPS == 2))
+			{
+				float fPercentBetweenStripsHot = 1.0f/NUM_STRIPS_HOT;
+
+				// round this so that the chamber overflows align
+				if( NUM_CHAMBERS > 10 )
+					fPercentBetweenStripsHot = froundf( fPercentBetweenStripsHot, fChamberWidthInPercent );
+
+				float fPercentOffsetHot = fmodf( GAMESTATE->m_fSongBeat/4+1000, fPercentBetweenStripsHot );
+				ASSERT( fPercentOffsetHot >= 0  &&  fPercentOffsetHot <= fPercentBetweenStripsHot );
+
+				for( float f=fPercentOffset+1; f>=0; f-=fPercentBetweenStrips )
+				{
+					DrawMask( f );
+					DrawStrip( f );
+					if (f <= fPercentOffsetHot+1)
+						DrawStripHot( f );
+					DrawMask( f-fPercentBetweenStripsHot );
+					DrawStrip( f );
+					DrawStripHot( f-fPercentBetweenStripsHot );
+				}
+			}
+			else
+			{
+				for( float f=fPercentOffset+1; f>=0; f-=fPercentBetweenStrips )
+				{
+					DrawMask( f );
+					DrawStrip( f );
+					DrawStripHot( f );
+				}
+			}
 		}
 
 		m_sprFrame.Draw();
@@ -154,7 +188,6 @@ public:
 
 
 		m_sprStreamNormal.StretchTo( rect );
-		m_sprStreamHot.StretchTo( rect );
 
 
 		// set custom texture coords
@@ -167,13 +200,53 @@ public:
 			1);
 
 		m_sprStreamNormal.SetCustomTextureRect( frectCustomTexRect );
+
+		m_sprStreamNormal.Draw();
+	}
+
+	void DrawStripHot( float fRightEdgePercent )
+	{
+		RectI rect;
+
+		const float fChamberWidthInPercent = 1.0f/NUM_CHAMBERS;
+		const float fStripWidthInPercent = 1.0f/NUM_STRIPS_HOT;
+		
+		const float fCorrectedRightEdgePercent = fRightEdgePercent + fChamberWidthInPercent;
+		const float fCorrectedStripWidthInPercent = fStripWidthInPercent + 2*fChamberWidthInPercent;
+		const float fCorrectedLeftEdgePercent = fCorrectedRightEdgePercent - fCorrectedStripWidthInPercent;
+
+
+		// set size of streams
+		rect.left	= int(-METER_WIDTH/2 + METER_WIDTH*max(0,fCorrectedLeftEdgePercent));
+		rect.top	= int(-METER_HEIGHT/2);
+		rect.right	= int(-METER_WIDTH/2 + METER_WIDTH*min(1,fCorrectedRightEdgePercent));
+		rect.bottom	= int(+METER_HEIGHT/2);
+
+		ASSERT( rect.left <= METER_WIDTH/2  &&  rect.right <= METER_WIDTH/2 );  
+
+		float fPercentCroppedFromLeft = max( 0, -fCorrectedLeftEdgePercent );
+		float fPercentCroppedFromRight = max( 0, fCorrectedRightEdgePercent-1 );
+
+
+		m_sprStreamHot.StretchTo( rect );
+
+
+		// set custom texture coords
+//		float fPrecentOffset = fRightEdgePercent;
+
+		RectF frectCustomTexRect(
+			fPercentCroppedFromLeft,
+			0,
+			1-fPercentCroppedFromRight,
+			1);
+
 		m_sprStreamHot.SetCustomTextureRect( frectCustomTexRect );
 
 		m_sprStreamHot.SetDiffuse( RageColor(1,1,1,m_fHotAlpha) );
 
-		m_sprStreamNormal.Draw();
 		m_sprStreamHot.Draw();
 	}
+
 
 	void DrawMask( float fPercent )
 	{

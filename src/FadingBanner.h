@@ -23,6 +23,8 @@ public:
 	void LoadFromCourse( const Course* pCourse );
 	void LoadRoulette();
 	void LoadRandom();
+	void LoadAbc();
+	void LoadGroup();
 	void LoadFallback();
 
 	bool LoadFromCachedBanner( const CString &path );

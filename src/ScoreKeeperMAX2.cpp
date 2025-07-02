@@ -158,9 +158,24 @@ void ScoreKeeperMAX2::OnNextSong( int iSongInCourseIndex, const Steps* pSteps, c
 		}
 	}
 	ASSERT( m_iMaxPossiblePoints >= 0 );
+	
+	if (GAMESTATE->m_CurrentPlayerOptions[m_PlayerNumber].m_bTransforms[PlayerOptions::TRANSFORM_LITTLE])
+		m_iMaxPossiblePoints = m_iMaxPossiblePoints >> 1;
+
 	m_iMaxScoreSoFar += m_iMaxPossiblePoints;
 
 	m_iNumTapsAndHolds = pNoteData->GetNumRowsWithTapOrHoldHead() + pNoteData->GetNumHoldNotes();
+
+	for( int i=0; i < pNoteData->GetNumHoldNotes(); i++ )		// for each HoldNote
+	{
+		const HoldNote &hn = pNoteData->GetHoldNote(i);
+		for( int j=0; j < pNoteData->GetNumHoldNotes(); j++ )		// for each HoldNote
+		{
+			const HoldNote &hn2 = pNoteData->GetHoldNote(j);
+			if ((hn2.iStartRow == hn.iStartRow) && (&hn2 < &hn))
+				m_iNumTapsAndHolds--;
+		}
+	}
 
 	m_iPointBonus = m_iMaxPossiblePoints;
 
@@ -182,10 +197,10 @@ static int GetScore(int p, int B, int S, int n)
 	 * changes the scoring rules slightly.
 	 */
 
-#if 0
+#if 1
 	/* This is the actual method described below. */
 	return p * (B / S) * n;
-#elif 1
+#elif 0
 	/* This doesn't round down B/S. */
 	return int(int64_t(p) * n * B / S);
 #else
@@ -403,6 +418,8 @@ void ScoreKeeperMAX2::HandleHoldScore( HoldNoteScore holdScore, TapNoteScore tap
 
 	if( holdScore == HNS_OK )
 		AddScore( TNS_MARVELOUS );
+	else
+		AddScore( TNS_MISS ); // we must addscore to increase the "event number" of the score counter
 
 	NSMAN->ReportScore(m_PlayerNumber, holdScore+7, 
                        g_CurStageStats.iScore[m_PlayerNumber],

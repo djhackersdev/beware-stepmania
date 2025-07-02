@@ -2,6 +2,7 @@
 #define SCREENPLAYEROPTIONS_H
 
 #include "ScreenOptionsMaster.h"
+#include "DifficultyIcon.h"
 
 class ScreenPlayerOptions : public ScreenOptionsMaster
 {
@@ -25,6 +26,9 @@ private:
 	Sprite      m_sprOptionsMessage;
 	
 	AutoActor	m_sprCancelAll[NUM_PLAYERS];
+	DifficultyIcon		m_DifficultyIcon[NUM_PLAYERS];
+	vector<Steps*> vSteps;
+	int	    m_difficultyrownum;
 };
 
 #endif

@@ -31,6 +31,9 @@
 #include "Foreach.h"
 #include "StageStats.h"
 #include "Style.h"
+#include "RageSurface.h"
+#include "RageSurfaceUtils.h"
+#include "RageSurface_Load.h"
 
 SongManager*	SONGMAN = NULL;	// global and accessable from anywhere in our program
 
@@ -235,7 +238,13 @@ void SongManager::LoadStepManiaSongDir( CString sDir, LoadingWindow *ld )
 				delete pNewSong;
 				continue;
 			}
-			
+			//load the card, to get it in the OS disk cache
+			CString temp = (pNewSong->GetSongDir() + "card.png");
+			if (IsAFile(temp))
+			{
+				CString error;
+				RageSurface *img = RageSurfaceUtils::LoadFile( temp, error );
+			}
             m_pSongs.push_back( pNewSong );
 			loaded++;
 		}
@@ -373,6 +382,9 @@ RageColor SongManager::GetGroupColor( const CString &sGroupName )
 	return g_vGroupColors[i%g_vGroupColors.size()];
 }
 
+IniFile ini_songcolors;
+int ini_songcolors_inited = 0;
+
 RageColor SongManager::GetSongColor( const Song* pSong )
 {
 	ASSERT( pSong );
@@ -391,6 +403,16 @@ RageColor SongManager::GetSongColor( const Song* pSong )
 	 */
 //	const StepsType st = GAMESTATE->GetCurrentStyle()->m_StepsType;
 	const vector<Steps*>& vpSteps = pSong->GetAllSteps();
+	
+	if (!ini_songcolors_inited) 
+	{	
+		ini_songcolors.ReadFile( THEME->GetPathToO("songinfo.ini",true));
+		ini_songcolors_inited = 1;
+	}
+	int redcolor = -1;
+	ini_songcolors.GetValue(pSong->GetFullTranslitTitle(),"RedEntry",redcolor);
+	
+	if (redcolor) 
 	for( unsigned i=0; i<vpSteps.size(); i++ )
 	{
 		const Steps* pSteps = vpSteps[i];
@@ -404,7 +426,7 @@ RageColor SongManager::GetSongColor( const Song* pSong )
 //		if(pSteps->m_StepsType != nt)
 //			continue;
 
-		if( pSteps->GetMeter() >= EXTRA_COLOR_METER )
+		if( (pSteps->GetMeter() >= EXTRA_COLOR_METER) || (redcolor == 1))
 			return EXTRA_COLOR;
 	}
 
@@ -468,12 +490,6 @@ CString SongManager::ShortenGroupName( CString sLongGroupName )
 	sLongGroupName.Replace( "Pump It Up", "PIU" );
 	sLongGroupName.Replace( "pump it up", "PIU" );
 	sLongGroupName.Replace( "PUMP IT UP", "PIU" );
-	sLongGroupName.Replace( "ParaParaParadise", "PPP" );
-	sLongGroupName.Replace( "paraparaparadise", "PPP" );
-	sLongGroupName.Replace( "PARAPARAPARADISE", "PPP" );
-	sLongGroupName.Replace( "Para Para Paradise", "PPP" );
-	sLongGroupName.Replace( "para para paradise", "PPP" );
-	sLongGroupName.Replace( "PARA PARA PARADISE", "PPP" );
 	sLongGroupName.Replace( "Dancing Stage", "DS" );
 	sLongGroupName.Replace( "dancing stage", "DS" );
 	sLongGroupName.Replace( "DANCING STAGE", "DS" );
@@ -483,10 +499,8 @@ CString SongManager::ShortenGroupName( CString sLongGroupName )
 	sLongGroupName.Replace( "Techno Motion", "TM");
 	sLongGroupName.Replace( "Dance Station 3DDX", "3DDX");
 	sLongGroupName.Replace( "DS3DDX", "3DDX");
-	sLongGroupName.Replace( "BeatMania", "BM");
-	sLongGroupName.Replace( "Beatmania", "BM");
-	sLongGroupName.Replace( "BEATMANIA", "BM");
-	sLongGroupName.Replace( "beatmania", "BM");
+	sLongGroupName.Replace( "DDR__home versions", "家庭用 DDR"); //"ddr home versions" kanji
+	sLongGroupName.Replace( "__", "\n"); //allow newlines in group entries
 	return sLongGroupName;
 }
 

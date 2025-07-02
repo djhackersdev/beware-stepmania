@@ -10,6 +10,7 @@
 #include "PrefsManager.h"
 #include "RageDisplay.h"
 #include "AnnouncerManager.h"
+#include "RandomNumber.h"
 
 GameSoundManager *SOUND = NULL;
 
@@ -255,7 +256,9 @@ static void DoPlayOnceFromDir( CString sPath )
 	if( arraySoundFiles.empty() )
 		return;
 
-	int index = rand() % arraySoundFiles.size();
+	//int index = rand() % arraySoundFiles.size();
+	//C random generators have bad randomness in low bits and recommend different method -beware
+	int index = randomnumber( arraySoundFiles.size() );
 	SOUNDMAN->PlayOnce( sPath + arraySoundFiles[index] );
 }
 

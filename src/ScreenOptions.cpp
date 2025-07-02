@@ -41,6 +41,12 @@ const float ITEM_X[NUM_PLAYERS] = { 260, 420 };
 #define EXPLANATION_ZOOM				THEME->GetMetricF("ScreenOptions","ExplanationZoom")
 #define COLOR_SELECTED					THEME->GetMetricC("ScreenOptions","ColorSelected")
 #define COLOR_NOT_SELECTED				THEME->GetMetricC("ScreenOptions","ColorNotSelected")
+#define COLOR_BK_SELECTED					THEME->GetMetricC("ScreenOptions","ColorItemBkSelected")
+#define COLOR_BK_NOT_SELECTED				THEME->GetMetricC("ScreenOptions","ColorItemBkNotSelected")
+#define COLOR_TITLE_NOT_SELECTED		THEME->GetMetricC("ScreenOptions","ColorTitleNotSelected")
+#define COLOR_OPTION_SELECTED_P1			THEME->GetMetricC("ScreenOptions","ColorOptionSelectedP1")
+#define COLOR_OPTION_SELECTED_P2			THEME->GetMetricC("ScreenOptions","ColorOptionSelectedP2")
+#define COLOR_OPTION_SELECTED_BOTH			THEME->GetMetricC("ScreenOptions","ColorOptionSelectedBoth")
 #define NUM_SHOWN_ITEMS					THEME->GetMetricI("ScreenOptions","NumShownItems")
 #define SHOW_BPM_IN_SPEED_TITLE			THEME->GetMetricB("ScreenOptions","ShowBpmInSpeedTitle")
 #define FRAME_ON_COMMAND				THEME->GetMetric ("ScreenOptions","FrameOnCommand")
@@ -214,22 +220,15 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 		UtilOnCommand( m_sprLineHighlight[p], "ScreenOptions" );
 	}
 	
-	// init highlights
-	FOREACH_PlayerNumber( p )
-	{
-		if( !GAMESTATE->IsHumanPlayer(p) )
-			continue;	// skip
-
-		m_Highlight[p].Load( (PlayerNumber)p, false );
-		m_framePage.AddChild( &m_Highlight[p] );
-	}
-
 	// init row icons
 	FOREACH_PlayerNumber( p )
 	{
 		if( !GAMESTATE->IsHumanPlayer(p) )
 			continue;	// skip
-
+			
+		m_HeaderOptionIcon[p].Load( p, "", true );
+		m_framePage.AddChild( &m_HeaderOptionIcon[p] );
+		
 		for( unsigned l=0; l<m_Rows.size(); l++ )
 		{	
 			Row &row = *m_Rows[l];
@@ -246,6 +245,7 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 		row.Type = Row::ROW_NORMAL;
 
 		vector<BitmapText *> & textItems = row.m_textItems;
+		vector<BitmapText *> & textItemsBk = row.m_textItemsBk;
 		const OptionRowData &optline = m_Rows[r]->m_RowDef;
 
 		unsigned c;
@@ -272,6 +272,15 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 			fX += fItemWidth/2;
 			bt->SetX( fX );
 
+			BitmapText *btbk = new BitmapText;
+			textItemsBk.push_back( btbk );
+			btbk->LoadFromFont( THEME->GetPathToF("ScreenOptions itembk") );
+			btbk->SetText( sText );
+			btbk->SetZoom( ITEMS_ZOOM );
+			btbk->SetShadowLength( 0 );
+			btbk->SetX( fX );
+
+
 			// init underlines
 			FOREACH_PlayerNumber( p )
 			{
@@ -293,7 +302,12 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 				row.m_bRowIsLong = true;
 				for( unsigned j=0; j<textItems.size(); j++ )	// for each option on this row
 					delete textItems[j];
+
+				for( unsigned j=0; j<textItemsBk.size(); j++ )	// for each option on this row
+					delete textItemsBk[j];
+					
 				textItems.clear();
+				textItemsBk.clear();				
 				FOREACH_PlayerNumber( p )
 				{
 					for( unsigned j=0; j<row.m_Underline[p].size(); j++ )	// for each option on this row
@@ -319,14 +333,24 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 				bt->SetZoom( ITEMS_ZOOM );
 				bt->SetShadowLength( 0 );
 
+				BitmapText *btbk = new BitmapText;
+				textItemsBk.push_back( btbk );
+
+				btbk->LoadFromFont( THEME->GetPathToF("ScreenOptions itembk") );
+				btbk->SetText( optline.choices[iChoiceWithFocus] );
+				btbk->SetZoom( ITEMS_ZOOM );
+				btbk->SetShadowLength( 0 );
+
 				if( optline.bOneChoiceForAllPlayers )
 				{
 					bt->SetX( truncf((ITEM_X[0]+ITEM_X[1])/2) );	// center the item
+					btbk->SetX( truncf((ITEM_X[0]+ITEM_X[1])/2) );	// center the item					
 					break;	// only initialize one item since it's shared
 				}
 				else
 				{
 					bt->SetX( ITEM_X[p] );
+					btbk->SetX( ITEM_X[p] );					
 				}
 			}
 
@@ -347,11 +371,24 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 		// over if we run off the right edge of the screen.
 		{
 			for( unsigned c=0; c<textItems.size(); c++ )
+			{
+				m_framePage.AddChild( textItemsBk[c] );
 				m_framePage.AddChild( textItems[c] );
+			}
 			FOREACH_PlayerNumber( p )
 				for( unsigned c=0; c<row.m_Underline[p].size(); c++ )
 					m_framePage.AddChild( row.m_Underline[p][c] );
 		}
+	}
+
+	// init highlights
+	FOREACH_PlayerNumber( p )
+	{
+		if( !GAMESTATE->IsHumanPlayer(p) )
+			continue;	// skip
+
+		m_Highlight[p].Load( (PlayerNumber)p, false );
+		m_framePage.AddChild( &m_Highlight[p] );
 	}
 
 	// TRICKY:  Add one more item.  This will be "EXIT"
@@ -368,6 +405,17 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 	bt->SetShadowLength( 0 );
 	bt->SetX( CENTER_X );
 
+	BitmapText *btbk = new BitmapText;
+	row.m_textItemsBk.push_back( btbk );
+
+	btbk->LoadFromFont( THEME->GetPathToF("ScreenOptions itembk") );
+	btbk->SetText( THEME->GetMetric("OptionNames","Exit") );
+	btbk->SetZoom( ITEMS_ZOOM );
+	btbk->SetShadowLength( 0 );
+	btbk->SetX( CENTER_X );
+
+
+	m_framePage.AddChild( btbk );
 	m_framePage.AddChild( bt );
 
 	InitOptionsText();
@@ -480,6 +528,8 @@ void ScreenOptions::Init( InputMode im, OptionRowData OptionRows[], int iNumOpti
 			row.m_textItems[c]->FinishTweening();
 		FOREACH_PlayerNumber( p )
 		{
+			m_HeaderOptionIcon[p].FinishTweening();
+		
 			for( unsigned c=0; c<row.m_Underline[p].size(); c++ )
 				row.m_Underline[p][c]->FinishTweening();
 			row.m_OptionIcons[p].FinishTweening();
@@ -617,7 +667,10 @@ void ScreenOptions::InitOptionsText()
 		
 		// set the Y position of each item in the line
 		for( unsigned c=0; c<row.m_textItems.size(); c++ )
+		{
+			row.m_textItemsBk[c]->SetY( fY );
 			row.m_textItems[c]->SetY( fY );
+		}
 	}
 }
 
@@ -661,6 +714,10 @@ void ScreenOptions::PositionUnderlines()
 				bool bSelected = row.m_vbSelected[p][ iChoiceWithFocus ];
 				bool bHidden = bEmptyTitle || !bSelected || row.m_bHidden;
 
+				//hide the underlines on the currently selected line like ddr
+				if ((!row.m_RowDef.bMultiSelect) && (r == m_iCurrentRow[p]))
+					bHidden = true;
+
 				if( ul.GetDestY() != row.m_fY )
 				{
 					ul.StopTweening();
@@ -683,6 +740,14 @@ void ScreenOptions::PositionIcons()
 		if( !GAMESTATE->IsHumanPlayer(p) )
 			continue;
 
+		int iX, iY;
+		OptionIcon &icon = m_HeaderOptionIcon[p];
+		iX = THEME->GetMetricF("ScreenOptions",ssprintf("OptionIconsP%dX",p+1));
+		iY = THEME->GetMetricF("ScreenOptions",ssprintf("OptionIconsP%dY",p+1));
+		icon.SetX( iX );
+		icon.SetY( iY );
+		
+			
 		for( unsigned i=0; i<m_Rows.size(); i++ )	// foreach options line
 		{
 			Row &row = *m_Rows[i];
@@ -695,7 +760,14 @@ void ScreenOptions::PositionIcons()
 
 			int iWidth, iX, iY;			// We only use iY
 			GetWidthXY( (PlayerNumber)p, i, iChoiceWithFocus, iWidth, iX, iY );
-			icon.SetX( ICONS_X(p) );
+			iX = THEME->GetMetricF("ScreenOptions",ssprintf("OptionIconsP%dX",p+1)) + THEME->GetMetricF("OptionIconRow","SpacingX")*(i+1);
+			iY = THEME->GetMetricF("ScreenOptions",ssprintf("OptionIconsP%dY",p+1)) + THEME->GetMetricF("OptionIconRow","SpacingY")*(i+1);
+			if (i >= THEME->GetMetricF("ScreenOptions","MaxOptionIcon"))
+			{
+				iX = -999;
+				iY = -999;
+			}
+			icon.SetX( iX );
 
 			if( icon.GetDestY() != row.m_fY )
 			{
@@ -760,6 +832,17 @@ void ScreenOptions::TweenCursor( PlayerNumber pn )
 
 	if( GAMESTATE->IsHumanPlayer(pn) )  
 	{
+		enum PlayerNumber p_other;
+		if (pn == PLAYER_1) { p_other = PLAYER_2; } else { p_other = PLAYER_1; }
+		if( GAMESTATE->IsHumanPlayer(p_other) )
+		{
+			if (m_iCurrentRow[pn] == m_iCurrentRow[p_other])
+			{
+				m_sprLineHighlight[pn].Load( THEME->GetPathToG("ScreenOptions highlight both") );
+			} else m_sprLineHighlight[pn].Load( THEME->GetPathToG(ssprintf("ScreenOptions highlight p%d",pn+1)) );
+		} else m_sprLineHighlight[pn].Load( THEME->GetPathToG(ssprintf("ScreenOptions highlight p%d",pn+1)) );
+
+
 		UtilCommand( m_sprLineHighlight[pn], "ScreenOptions", "Change" );
 		if( m_Rows[iRow]->Type == Row::ROW_EXIT )
 			UtilCommand( m_sprLineHighlight[pn], "ScreenOptions", "ChangeToExit" );
@@ -790,6 +873,7 @@ void ScreenOptions::UpdateText( int iRow )
 		item_no = min( item_no, row.m_textItems.size()-1 );
 
 		row.m_textItems[item_no]->SetText( data.choices[iChoiceWithFocus] );
+		row.m_textItemsBk[item_no]->SetText( data.choices[iChoiceWithFocus] );
 	}
 }
 
@@ -808,13 +892,51 @@ void ScreenOptions::UpdateEnabledDisabled()
 				bThisRowIsSelected = true;
 
 		/* Don't tween selection colors at all. */
-		const RageColor color = bThisRowIsSelected? colorSelected:colorNotSelected;
+		RageColor color = bThisRowIsSelected? colorSelected:COLOR_TITLE_NOT_SELECTED;
+		
 		row.m_sprBullet.SetGlobalDiffuseColor( color );
 		row.m_textTitle.SetGlobalDiffuseColor( color );
 
+		color = bThisRowIsSelected? colorSelected:colorNotSelected;
+		RageColor colorbk = bThisRowIsSelected? COLOR_BK_SELECTED:COLOR_BK_NOT_SELECTED;
+
 		{
 			for( unsigned j=0; j<row.m_textItems.size(); j++ )
+			{
+				
+				//on a non-selected row, mark the selected options with a color, like ddr
+				if (!bThisRowIsSelected)
+				{
+					const int iNumOptions = (row.Type == Row::ROW_EXIT)? 1: row.m_RowDef.choices.size();
+					
+					if (iNumOptions > 1)
+					{
+						bool bSelectedP1 = ((j == row.m_iChoiceWithFocus[PLAYER_1]) && GAMESTATE->IsHumanPlayer(PLAYER_1));
+						bool bSelectedP2 = ((j == row.m_iChoiceWithFocus[PLAYER_2]) && GAMESTATE->IsHumanPlayer(PLAYER_2));
+
+						if (bSelectedP1 && bSelectedP2)
+						{
+							color = COLOR_OPTION_SELECTED_BOTH;
+						} else if (bSelectedP1)
+						{
+							color = COLOR_OPTION_SELECTED_P1;
+						} else if (bSelectedP2)
+						{
+							color = COLOR_OPTION_SELECTED_P2;
+						} else
+							color = colorNotSelected;
+					} else {
+						if ((row.Type == Row::ROW_EXIT) && ((!GAMESTATE->IsHumanPlayer(PLAYER_1)) || (!GAMESTATE->IsHumanPlayer(PLAYER_2))))
+						{
+							color = colorSelected;
+							colorbk = COLOR_BK_SELECTED;
+						}
+					}
+				}
+				
 				row.m_textItems[j]->SetGlobalDiffuseColor( color );
+				row.m_textItemsBk[j]->SetGlobalDiffuseColor( colorbk );
+			}
 		}
 
 		{
@@ -829,6 +951,12 @@ void ScreenOptions::UpdateEnabledDisabled()
 				row.m_textItems[j]->BeginTweening( 0.3f );
 				row.m_textItems[j]->SetDiffuseAlpha( DiffuseAlpha );
 				row.m_textItems[j]->SetY( row.m_fY );
+
+				row.m_textItemsBk[j]->StopTweening();
+				row.m_textItemsBk[j]->BeginTweening( 0.3f );
+				row.m_textItemsBk[j]->SetDiffuseAlpha( DiffuseAlpha );
+				row.m_textItemsBk[j]->SetY( row.m_fY );
+
 			}
 		}
 
@@ -840,9 +968,15 @@ void ScreenOptions::UpdateEnabledDisabled()
 					bExitRowIsSelectedByBoth = false;
 
 			if( bExitRowIsSelectedByBoth )
-				row.m_textItems[0]->SetEffectDiffuseShift( 1.0f, colorSelected, colorNotSelected );
+			{
+				row.m_textItems[0]->SetEffectDiffuseShift( 0.5f, colorSelected, RageColor(0,0,0,1) );
+				row.m_textItemsBk[0]->SetEffectDiffuseShift( 0.5f, COLOR_BK_SELECTED, RageColor(0,0,0,1) );
+			}
 			else
+			{
 				row.m_textItems[0]->SetEffectNone();
+				row.m_textItemsBk[0]->SetEffectNone();
+			}
 		}
 
 		if( row.m_sprBullet.GetDestY() != row.m_fY )

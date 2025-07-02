@@ -24,7 +24,7 @@
 #include "StepsUtil.h"
 #include "Foreach.h"
 #include "Style.h"
-
+#include "IniFile.h"
 
 const int NUM_SCORE_DIGITS	=	9;
 
@@ -47,6 +47,9 @@ const int NUM_SCORE_DIGITS	=	9;
 #define DO_ROULETTE_ON_MENU_TIMER			THEME->GetMetricB(m_sName,"DoRouletteOnMenuTimer")
 #define ALIGN_MUSIC_BEATS					THEME->GetMetricB(m_sName,"AlignMusicBeat")
 #define CODES								THEME->GetMetric (m_sName,"Codes")
+#define SORTICON_SORT_CHANGE_COMMAND 		THEME->GetMetric (m_sName,"SortIconSortChangeCommand")
+
+#define ANIM_BPMDISPLAY_SPACING 20
 
 static const ScreenMessage	SM_AllowOptionsMenuRepeat	= ScreenMessage(SM_User+1);
 CString g_sFallbackCDTitlePath;
@@ -58,6 +61,8 @@ static CString g_sBannerPath;
 static bool g_bBannerWaiting = false;
 static bool g_bSampleMusicWaiting = false;
 static RageTimer g_StartedLoadingAt(RageZeroTimer);
+
+bool AnimBPMInitialflag = false;
 
 ScreenSelectMusic::ScreenSelectMusic( CString sClassName ) : ScreenWithMenuElements( sClassName )
 {
@@ -138,6 +143,19 @@ ScreenSelectMusic::ScreenSelectMusic( CString sClassName ) : ScreenWithMenuEleme
 	SET_XY( m_BPMDisplay );
 	this->AddChild( &m_BPMDisplay );
 
+	for (int i=0 ; i < NUM_ANIM_BPMDISPLAY ; i++)
+	{
+		m_AnimBPMDisplay[i].SetName( "BPMDisplay" );
+		m_AnimBPMDisplay[i].Load();
+		m_AnimBPMDisplay[i].SetName( "AnimBPMDisplay" );
+		SET_XY( m_AnimBPMDisplay[i] );
+		m_AnimBPMDisplay[i].SetName( "BPMDisplay" );
+		m_AnimBPMDisplayY = m_AnimBPMDisplay[i].GetY();
+		m_AnimBPMDisplay[i].SetY( m_AnimBPMDisplayY + clamp((i - MIDDLE_ANIM_BPMDISPLAY),-1.25f,1.25f) * ANIM_BPMDISPLAY_SPACING);
+		this->AddChild( &m_AnimBPMDisplay[i] );	
+	}
+	AnimBPMInitialflag = true;
+
 	m_DifficultyDisplay.SetName( "DifficultyDisplay" );
 	m_DifficultyDisplay.SetShadowLength( 0 );
 	SET_XY( m_DifficultyDisplay );
@@ -190,6 +208,16 @@ ScreenSelectMusic::ScreenSelectMusic( CString sClassName ) : ScreenWithMenuEleme
 	m_textNumSongs.LoadFromFont( THEME->GetPathF(m_sName,"num songs") );
 	SET_XY( m_textNumSongs );
 	this->AddChild( &m_textNumSongs );
+
+	m_textItemName.SetName( "ItemName" );
+	m_textItemName.LoadFromFont( THEME->GetPathF(m_sName,"itemname") );
+	SET_XY( m_textItemName );
+	this->AddChild( &m_textItemName );
+	
+	m_sprItemNameCard.SetName( "ItemNameCard" );
+	SET_XY( m_sprItemNameCard );
+	this->AddChild( &m_sprItemNameCard );
+
 
 	m_textTotalTime.SetName( "TotalTime" );
 	m_textTotalTime.LoadFromFont( THEME->GetPathF(m_sName,"total time") );
@@ -502,6 +530,8 @@ void ScreenSelectMusic::TweenOnScreen()
 	ON_COMMAND( m_GrooveGraph );
 	ON_COMMAND( m_textSongOptions );
 	ON_COMMAND( m_textNumSongs );
+	ON_COMMAND( m_textItemName );	
+	ON_COMMAND( m_sprItemNameCard );	
 	ON_COMMAND( m_textTotalTime );
 	ON_COMMAND( m_MusicSortDisplay );
 	ON_COMMAND( m_MusicWheelUnder );
@@ -512,6 +542,8 @@ void ScreenSelectMusic::TweenOnScreen()
 	ON_COMMAND( m_Artist );
 	ON_COMMAND( m_MachineRank );
 	ON_COMMAND( m_Overlay );
+
+	for (int i=0 ; i < NUM_ANIM_BPMDISPLAY ; i++) ON_COMMAND( m_AnimBPMDisplay[i] );
 
 	FOREACH_HumanPlayer( p )
 	{		
@@ -556,6 +588,8 @@ void ScreenSelectMusic::TweenOffScreen()
 	OFF_COMMAND( m_GrooveGraph );
 	OFF_COMMAND( m_textSongOptions );
 	OFF_COMMAND( m_textNumSongs );
+	OFF_COMMAND( m_textItemName );
+	OFF_COMMAND( m_sprItemNameCard );	
 	OFF_COMMAND( m_textTotalTime );
 	OFF_COMMAND( m_MusicSortDisplay );
 	m_MusicWheel.TweenOffScreen();
@@ -566,6 +600,8 @@ void ScreenSelectMusic::TweenOffScreen()
 	OFF_COMMAND( m_Artist );
 	OFF_COMMAND( m_MachineRank );
 	OFF_COMMAND( m_Overlay );
+
+	for (int i=0 ; i < NUM_ANIM_BPMDISPLAY ; i++) OFF_COMMAND( m_AnimBPMDisplay[i] );
 
 	FOREACH_HumanPlayer( p )
 	{		
@@ -624,6 +660,7 @@ void ScreenSelectMusic::TweenScoreOnAndOffAfterChangeSort()
 		m_textHighScore[p].Command( SCORE_SORT_CHANGE_COMMAND(p) );
 		m_sprHighScoreFrame[p].Command( SCORE_FRAME_SORT_CHANGE_COMMAND(p) );
 	}
+	m_MusicSortDisplay.Command( SORTICON_SORT_CHANGE_COMMAND );
 
 	switch( GAMESTATE->m_SortOrder )
 	{
@@ -714,8 +751,89 @@ void ScreenSelectMusic::CheckBackgroundRequests()
 	}
 }
 
+float lastscrolloffset=0;
+float randomeffecttimer=0;
+int animBPMDisplayrotate=0;
+
 void ScreenSelectMusic::Update( float fDeltaTime )
 {
+	//update animated BPM display things 
+	float offset = m_MusicWheel.GetPositionOffsetFromSelection();
+	if (AnimBPMInitialflag)
+		animBPMDisplayrotate = 0;
+		
+	bool AnimBPMChangedflag = ((offset >= 0) && (lastscrolloffset < offset)) || ((offset <= 0) && (lastscrolloffset > offset)) || AnimBPMInitialflag;
+	bool istweening = m_sprBannerMask.GetTweenTimeLeft() > 0;
+	if (istweening)
+		AnimBPMChangedflag = true;
+	if (AnimBPMChangedflag && !istweening)
+	{
+		BPMDisplay temp;
+		if (offset < lastscrolloffset)
+			animBPMDisplayrotate--;	//back
+		else
+			animBPMDisplayrotate++; //forward
+		wrap(animBPMDisplayrotate,NUM_ANIM_BPMDISPLAY);
+	}
+
+	lastscrolloffset = offset;
+	
+	for (int i=0 ; i < NUM_ANIM_BPMDISPLAY ; i++)
+	{
+		float scrolloffset = clamp(m_MusicWheel.GetPositionOffsetFromSelection() + (i - MIDDLE_ANIM_BPMDISPLAY),-1.25f,1.25f) * ANIM_BPMDISPLAY_SPACING;
+		m_AnimBPMDisplay[(i+animBPMDisplayrotate) % NUM_ANIM_BPMDISPLAY].SetY( m_AnimBPMDisplayY + scrolloffset);
+	}
+
+	if (AnimBPMChangedflag)
+	{
+		AnimBPMInitialflag = false;
+		AnimBPMChangedflag = false;
+		for (int i=0 ; i < NUM_ANIM_BPMDISPLAY ; i++)
+		{
+			WheelItemData* wid = m_MusicWheel.GetItemNearSelection(i-MIDDLE_ANIM_BPMDISPLAY);
+			switch( wid->m_Type )
+			{
+				case TYPE_COURSE:				
+				{
+					m_AnimBPMDisplay[(i+animBPMDisplayrotate) % NUM_ANIM_BPMDISPLAY].SetBPM( wid->m_pCourse );
+					break;
+				}
+				case TYPE_SONG:
+				case TYPE_PORTAL:
+				{
+					m_AnimBPMDisplay[(i+animBPMDisplayrotate) % NUM_ANIM_BPMDISPLAY].SetBPM( wid->m_pSong );
+					break;
+				}
+				default: m_AnimBPMDisplay[(i+animBPMDisplayrotate) % NUM_ANIM_BPMDISPLAY].NoBPM();
+			}
+		}
+	}
+
+	//do groove radar and difficultymeter "random" effect
+	randomeffecttimer += fDeltaTime;
+	if ((m_MusicWheel.GetSelectedType() == TYPE_RANDOM) && (randomeffecttimer > 0.125f))
+	{
+		randomeffecttimer=0;
+		//choose a random song
+		Song* pSong = m_MusicWheel.GetSelectedSong();
+
+		FOREACH_PlayerNumber( p )
+			m_vpSteps.clear();
+
+		pSong->GetSteps( m_vpSteps, GAMESTATE->GetCurrentStyle()->m_StepsType );
+		SwitchToPreferredDifficulty();
+		FOREACH_HumanPlayer( pn )
+		{
+			int a = m_iSelection[pn];
+			CLAMP( a, 0, m_vpSteps.size()-1 );
+			Steps* pSteps = m_vpSteps.empty()? NULL: m_vpSteps[a];
+			m_DifficultyIcon[pn].SetFromSteps( pn, pSteps );
+			m_GrooveRadar.SetFromSteps( pn, pSteps );
+			m_DifficultyMeter[pn].SetFromSteps(pSteps );
+		}
+
+	}
+
 	Screen::Update( fDeltaTime );
 	m_bgOptionsOut.Update( fDeltaTime );
 	m_bgNoOptionsOut.Update( fDeltaTime );
@@ -765,6 +883,21 @@ void ScreenSelectMusic::Input( const DeviceInput& DeviceI, InputEventType type, 
 			(type == IET_SLOW_REPEAT || type == IET_FAST_REPEAT ))
 			return; /* not allowed yet */
 		
+		if (m_MusicWheel.GetSelectedType() == TYPE_RANDOM)
+		{
+			Song* pSong = GAMESTATE->m_pCurSong;
+			m_sSampleMusicToPlay = pSong->GetMusicPath();
+			m_pSampleMusicTimingData = &pSong->m_Timing;
+			m_fSampleStartSeconds = pSong->m_fMusicSampleStartSeconds;
+			m_fSampleLengthSeconds = pSong->m_fMusicSampleLengthSeconds;
+			g_bSampleMusicWaiting = false;
+			if( !m_MusicWheel.IsRouletting() && SOUND->GetMusicPath() != m_sSampleMusicToPlay )
+			{
+				SOUND->StopMusic();
+				if( !m_sSampleMusicToPlay.empty() )
+					g_bSampleMusicWaiting = true;
+			}
+		}
 		m_bGoToOptions = true;
 		m_sprOptionsMessage.SetState( 1 );
 		SCREENMAN->PlayStartSound();
@@ -834,6 +967,19 @@ void ScreenSelectMusic::Input( const DeviceInput& DeviceI, InputEventType type, 
 			}
 			break;
 		}
+
+		//sort mode is changed if you press one button, keep it pressed, and then press the other one.
+		//it is not needed to press both simultaneously (while SM requires it)
+		if ((type == IET_FIRST_PRESS) && bLeftAndRightPressed)
+		{
+			if( GAMESTATE->IsCourseMode() )
+				; /* nothing */
+			else if( ( GAMESTATE->IsExtraStage() && !PREFSMAN->m_bPickExtraStage ) || GAMESTATE->IsExtraStage2() )
+				m_soundLocked.Play();
+			else
+				m_MusicWheel.NextSort();
+			return;
+		}
 	}
 
 
@@ -865,6 +1011,7 @@ void ScreenSelectMusic::Input( const DeviceInput& DeviceI, InputEventType type, 
 	{
 		if( CodeDetector::EnteredEasierDifficulty(GameI.controller) )
 		{
+			if (GAMESTATE->m_PlayMode == PLAY_MODE_ONI) return;
 			if( GAMESTATE->IsExtraStage() || GAMESTATE->IsExtraStage2() )
 				m_soundLocked.Play();
 			else
@@ -873,6 +1020,7 @@ void ScreenSelectMusic::Input( const DeviceInput& DeviceI, InputEventType type, 
 		}
 		if( CodeDetector::EnteredHarderDifficulty(GameI.controller) )
 		{
+			if (GAMESTATE->m_PlayMode == PLAY_MODE_ONI) return;
 			if( GAMESTATE->IsExtraStage() || GAMESTATE->IsExtraStage2() )
 				m_soundLocked.Play();
 			else
@@ -900,15 +1048,8 @@ void ScreenSelectMusic::Input( const DeviceInput& DeviceI, InputEventType type, 
 				m_MusicWheel.ChangeSort( SORT_MODE_MENU );
 			return;
 		}
-		if( CodeDetector::EnteredNextSort(GameI.controller) )
-		{
-			if( ( GAMESTATE->IsExtraStage() && !PREFSMAN->m_bPickExtraStage ) || GAMESTATE->IsExtraStage2() )
-				m_soundLocked.Play();
-			else
-				m_MusicWheel.NextSort();
-			return;
-		}
-		if( !GAMESTATE->IsExtraStage() && !GAMESTATE->IsExtraStage2() && CodeDetector::DetectAndAdjustMusicOptions(GameI.controller) )
+		if( !GAMESTATE->IsExtraStage() && !GAMESTATE->IsExtraStage2() && 
+		!(GAMESTATE->m_PlayMode == PLAY_MODE_ONI) && CodeDetector::DetectAndAdjustMusicOptions(GameI.controller) )
 		{
 			m_soundOptionsChange.Play();
 			UpdateOptionsDisplays();
@@ -978,6 +1119,7 @@ void ScreenSelectMusic::ChangeDifficulty( PlayerNumber pn, int dir )
 					AfterTrailChange( p );
 				}
 			}
+			m_CourseContentsFrame.TweenInAfterChangedCourse();
 		}
 		break;
 
@@ -1001,6 +1143,7 @@ void ScreenSelectMusic::ChangeDifficulty( PlayerNumber pn, int dir )
 					m_iSelection[p] = m_iSelection[pn];
 					AfterStepsChange( p );
 				}
+				m_DifficultyIcon[p].SetFromDifficulty(p, GAMESTATE->m_PreferredDifficulty[p]);
 			}
 		}
 		break;
@@ -1099,8 +1242,46 @@ void ScreenSelectMusic::MenuStart( PlayerNumber pn )
 		return;
 
 	// a song was selected
+	Song* pSong;
+	Course* pCourse;
+
 	switch( m_MusicWheel.GetSelectedType() )
 	{
+	case TYPE_RANDOM:
+		LOG->Trace( "chosen random");
+		// we must change to a random song here
+		pSong = m_MusicWheel.GetSelectedSong();
+		GAMESTATE->m_pCurSong = pSong;
+		if( pSong )
+			GAMESTATE->m_pPreferredSong = pSong;
+
+		pCourse = m_MusicWheel.GetSelectedCourse();
+		GAMESTATE->m_pCurCourse = pCourse;
+		if( pCourse )
+			GAMESTATE->m_pPreferredCourse = pCourse;
+
+		FOREACH_PlayerNumber( p )
+		{
+			GAMESTATE->m_pCurSteps[p] = NULL;
+			GAMESTATE->m_pCurTrail[p] = NULL;
+			m_vpSteps.clear();
+			m_vpTrails.clear();
+		}
+		pSong->GetSteps( m_vpSteps, GAMESTATE->GetCurrentStyle()->m_StepsType );
+		StepsUtil::SortNotesArrayByDifficulty( m_vpSteps );
+
+		m_DifficultyDisplay.SetDifficulties( pSong, GAMESTATE->GetCurrentStyle()->m_StepsType );
+
+		SwitchToPreferredDifficulty();
+
+		FOREACH_HumanPlayer( p )
+		{
+			if( GAMESTATE->m_pCurCourse )
+				AfterTrailChange( p );
+			else
+				AfterStepsChange( p );
+		}
+
 	case TYPE_SONG:
 	case TYPE_PORTAL:
 		{
@@ -1140,6 +1321,7 @@ void ScreenSelectMusic::MenuStart( PlayerNumber pn )
 			 * in course mode).  Make sure we're in a single song mode. */
 			if( GAMESTATE->IsCourseMode() )
 				GAMESTATE->m_PlayMode = PLAY_MODE_REGULAR;
+
 		}
 		break;
 
@@ -1163,7 +1345,6 @@ void ScreenSelectMusic::MenuStart( PlayerNumber pn )
 		break;
 	case TYPE_SECTION:
 	case TYPE_ROULETTE:
-	case TYPE_RANDOM:
 	case TYPE_SORT:
 		break;
 	default:
@@ -1246,8 +1427,8 @@ void ScreenSelectMusic::AfterStepsChange( PlayerNumber pn )
 	}
 
 	m_textHighScore[pn].SetText( ssprintf("%*i", NUM_SCORE_DIGITS, iScore) );
-	
-	m_DifficultyIcon[pn].SetFromSteps( pn, pSteps );
+	if (pSteps)
+		m_DifficultyIcon[pn].SetFromSteps( pn, pSteps );
 	if( pSteps && pSteps->IsAutogen() )
 	{
 		m_AutoGenIcon[pn].SetEffectDiffuseShift();
@@ -1257,6 +1438,11 @@ void ScreenSelectMusic::AfterStepsChange( PlayerNumber pn )
 		m_AutoGenIcon[pn].SetEffectNone();
 		m_AutoGenIcon[pn].SetDiffuse( RageColor(1,1,1,0) );
 	}
+	IniFile ini;
+	ini.ReadFile( THEME->GetPathToO("songinfo.ini",true));
+	m_DifficultyMeter[pn].glowoverride = -1;
+	if (pSong) ini.GetValue(pSong->GetTranslitMainTitle(),"GlowFeet",m_DifficultyMeter[pn].glowoverride);
+
 	m_DifficultyMeter[pn].SetFromGameState( pn );
 	if( SHOW_DIFFICULTY_LIST )
 		m_DifficultyList.SetFromGameState();
@@ -1421,7 +1607,7 @@ void ScreenSelectMusic::AfterMusicChange()
 
 	m_MachineRank.SetText( "" );
 
-	m_sSampleMusicToPlay = "";
+	//m_sSampleMusicToPlay = "";
 	m_pSampleMusicTimingData = NULL;
 	g_sCDTitlePath = "";
 	g_sBannerPath = "";
@@ -1441,8 +1627,8 @@ void ScreenSelectMusic::AfterMusicChange()
 			g_sCDTitlePath = ""; // none
 			m_DifficultyDisplay.UnsetDifficulties();
 
-			m_fSampleStartSeconds = 0;
-			m_fSampleLengthSeconds = -1;
+			//m_fSampleStartSeconds = 0;
+			//m_fSampleLengthSeconds = -1;
 
 			m_textNumSongs.SetText( "" );
 			m_textTotalTime.SetText( "" );
@@ -1450,8 +1636,22 @@ void ScreenSelectMusic::AfterMusicChange()
 			switch( m_MusicWheel.GetSelectedType() )
 			{
 			case TYPE_SECTION:
-				g_sBannerPath = SONGMAN->GetGroupBannerPath( sGroup );
-				m_sSampleMusicToPlay = THEME->GetPathS(m_sName,"section music");
+				
+				//m_sSampleMusicToPlay = THEME->GetPathS(m_sName,"section music");
+				
+				switch (GAMESTATE->m_SortOrder)
+				{
+				case SORT_TITLE:
+				case SORT_ARTIST:
+				case SORT_BPM:
+					bWantBanner = false;
+					m_Banner.LoadAbc();
+					break;
+				default:
+//					g_sBannerPath = SONGMAN->GetGroupBannerPath( sGroup );
+					bWantBanner = false;
+					m_Banner.LoadGroup();
+				}
 				break;
 			case TYPE_SORT:
 				bWantBanner = false; /* we load it ourself */
@@ -1558,6 +1758,7 @@ void ScreenSelectMusic::AfterMusicChange()
 		m_BPMDisplay.NoBPM();
 		g_sCDTitlePath = ""; // none
 		m_DifficultyDisplay.UnsetDifficulties();
+		randomeffecttimer = 1;
 
 		m_fSampleStartSeconds = 0;
 		m_fSampleLengthSeconds = -1;
@@ -1645,6 +1846,34 @@ void ScreenSelectMusic::AfterMusicChange()
 		{
 			m_sprCourseHasMods->StopTweening();
 			COMMAND( m_sprCourseHasMods, "Hide" );
+		}
+
+		WheelItemData* wid = m_MusicWheel.GetItemNearSelection(0);
+		
+		CString temp = SetExtension(wid->m_pCourse->m_sPath, "");
+		temp = temp + "-card.png";
+		bool m_bHasCard = IsAFile(temp);
+		
+		if (m_bHasCard)
+		{
+			m_textItemName.SetText("");		
+			m_sprItemNameCard.SetZoom(1);
+			m_sprItemNameCard.Load(temp);
+			m_sprItemNameCard.SetDiffuse( wid->m_color );
+		} else {
+			m_sprItemNameCard.SetZoom(0);
+			m_textItemName.SetDiffuse(wid->m_color);
+			m_textItemName.SetText(wid->m_pCourse->GetFullDisplayTitle());
+			m_textItemName.SetZoom(0.8f);
+		}
+
+		float fSourcePixelWidth = (float)m_textItemName.GetUnzoomedWidth()*m_textItemName.GetZoomX();
+		const float fMaxTextWidth = 190;
+		if( fSourcePixelWidth > fMaxTextWidth  )
+		{
+			const float factor = fMaxTextWidth / fSourcePixelWidth;
+			m_textItemName.SetZoomX( m_textItemName.GetZoomX() * factor );
+			m_textItemName.SetZoomY( m_textItemName.GetZoomY() * factor );
 		}
 
 		break;

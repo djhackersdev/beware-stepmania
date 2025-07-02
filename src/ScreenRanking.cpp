@@ -43,8 +43,10 @@ XToString( PageType );
 #define SONG_SCORE_SECONDS_PER_ROW	THEME->GetMetricF("ScreenRanking","SongScoreSecondsPerRow")
 
 #define BULLET_START_X				THEME->GetMetricF("ScreenRanking","BulletStartX")
+#define BULLET_START_ONI_X			THEME->GetMetricF("ScreenRanking","BulletStartOniX")
 #define BULLET_START_Y				THEME->GetMetricF("ScreenRanking","BulletStartY")
 #define NAME_START_X				THEME->GetMetricF("ScreenRanking","NameStartX")
+#define NAME_START_ONI_X			THEME->GetMetricF("ScreenRanking","NameStartOniX")
 #define NAME_START_Y				THEME->GetMetricF("ScreenRanking","NameStartY")
 #define SCORE_START_X				THEME->GetMetricF("ScreenRanking","ScoreStartX")
 #define SCORE_START_Y				THEME->GetMetricF("ScreenRanking","ScoreStartY")
@@ -67,8 +69,10 @@ XToString( PageType );
 
 
 #define BULLET_X(row)				(BULLET_START_X+ROW_SPACING_X*row)
+#define BULLET_ONI_X(row)				(BULLET_START_ONI_X+ROW_SPACING_X*row)
 #define BULLET_Y(row)				(BULLET_START_Y+ROW_SPACING_Y*row)
 #define NAME_X(row)					(NAME_START_X+ROW_SPACING_X*row)
+#define NAME_ONI_X(row)					(NAME_START_ONI_X+ROW_SPACING_X*row)
 #define NAME_Y(row)					(NAME_START_Y+ROW_SPACING_Y*row)
 #define SCORE_X(row)				(SCORE_START_X+ROW_SPACING_X*row)
 #define SCORE_Y(row)				(SCORE_START_Y+ROW_SPACING_Y*row)
@@ -310,19 +314,24 @@ ScreenRanking::ScreenRanking( CString sClassName ) : ScreenAttract( sClassName )
 		{
 			for( unsigned c=0; c<asCoursePaths.size(); c++ )
 			{
-				PageToShow pts;
-				pts.type = PAGE_TYPE_TRAIL;
-				pts.colorIndex = i;
-				pts.nt = aStepsTypesToShow[i];
-				pts.pCourse = SONGMAN->GetCourseFromPath( asCoursePaths[c] );
-				if( pts.pCourse == NULL )
-					continue;
+				FOREACH_ShownCourseDifficulty(d)
+				{
 
-				pts.pTrail = pts.pCourse->GetTrail( pts.nt );
-				if( pts.pTrail == NULL )
-					continue;
+					PageToShow pts;
+					pts.type = PAGE_TYPE_TRAIL;
+					pts.colorIndex = i;
+					pts.nt = aStepsTypesToShow[i];
+					pts.pCourse = SONGMAN->GetCourseFromPath( asCoursePaths[c] );
+					if( pts.pCourse == NULL )
+						continue;
+					if ((pts.pCourse->GetPlayMode() == PLAY_MODE_ONI) && (d != DIFFICULTY_MEDIUM))
+						continue;
+					pts.pTrail = pts.pCourse->GetTrail( pts.nt, d);
+					if( pts.pTrail == NULL )
+						continue;
 
-				m_vPagesToShow.push_back( pts );
+					m_vPagesToShow.push_back( pts );
+				}
 			}
 		}
 	}
@@ -524,7 +533,10 @@ float ScreenRanking::SetPage( PageToShow pts )
 				m_sprBullets[l].Reset();
 				m_sprBullets[l].StopAnimating();
 				m_sprBullets[l].SetState( l );
-				m_sprBullets[l].SetXY( BULLET_X(l), BULLET_Y(l) );
+				if (bShowPoints)
+					m_sprBullets[l].SetXY( BULLET_ONI_X(l), BULLET_Y(l) );
+				else
+					m_sprBullets[l].SetXY( BULLET_X(l), BULLET_Y(l) );
 				ON_COMMAND( m_sprBullets[l] );
 			}
 
@@ -532,7 +544,10 @@ float ScreenRanking::SetPage( PageToShow pts )
 			if( bShowNames )
 			{
 				m_textNames[l].Reset();
-				m_textNames[l].SetXY( NAME_X(l), NAME_Y(l) );
+				if (bShowPoints)
+					m_textNames[l].SetXY( NAME_ONI_X(l), NAME_Y(l) );
+				else
+					m_textNames[l].SetXY( NAME_X(l), NAME_Y(l) );
 				m_textNames[l].SetDiffuse( STEPS_TYPE_COLOR(pts.colorIndex) );
 				ON_COMMAND( m_textNames[l] );
 			}
@@ -734,13 +749,19 @@ float ScreenRanking::SetPage( PageToShow pts )
 				m_textNames[l].SetText( hs.GetDisplayName() );
 				if( pts.pCourse->IsOni() )
 				{
-					m_textPoints[l].SetText( ssprintf("%04d",hs.iScore) );
-					m_textTime[l].SetText( SecondsToMMSSMsMs(hs.fSurviveSeconds) );
+					m_textPoints[l].SetText( ssprintf("%05d",hs.iScore) );
+					if (hs.fSurviveSeconds == 0.0f)
+						m_textTime[l].SetText( "00:57.30" );					
+					else
+						m_textTime[l].SetText( SecondsToMMSSMsMs(hs.fSurviveSeconds) );
 					m_textScores[l].SetText( "" );
 				} else {
 					m_textPoints[l].SetText( "" );
 					m_textTime[l].SetText( "" );
-					m_textScores[l].SetText( ssprintf("%09d",hs.iScore) );
+					if ( !hs.iScore )
+						m_textScores[l].SetText( "000573000" );					
+					else
+						m_textScores[l].SetText( ssprintf("%09d",hs.iScore) );
 				}
 				m_textNames[l].SetDiffuse( STEPS_TYPE_COLOR(pts.colorIndex) );
 				m_textPoints[l].SetDiffuse( STEPS_TYPE_COLOR(pts.colorIndex) );

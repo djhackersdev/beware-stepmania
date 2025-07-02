@@ -22,6 +22,14 @@
 #define SHOW_METER								THEME->GetMetricB(m_sName,"ShowMeter")
 #define FEET_IS_DIFFICULTY_COLOR				THEME->GetMetricB(m_sName,"FeetIsDifficultyColor")
 #define FEET_PER_DIFFICULTY						THEME->GetMetricB(m_sName,"FeetPerDifficulty")
+#define FEET_GLOWCOMMAND						THEME->GetMetric(m_sName,"FeetGlowCommand")
+
+#define METER_P1_X							THEME->GetMetricF(m_sName,"MeterP1X")
+#define METER_P2_X							THEME->GetMetricF(m_sName,"MeterP2X")
+#define FEET_P1_X							THEME->GetMetricF(m_sName,"FeetP1X")
+#define FEET_P2_X							THEME->GetMetricF(m_sName,"FeetP2X")
+#define METER_Y								THEME->GetMetricF(m_sName,"MeterY")
+#define FEET_Y								THEME->GetMetricF(m_sName,"FeetY")
 
 DifficultyMeter::DifficultyMeter()
 {
@@ -51,6 +59,19 @@ DifficultyMeter::DifficultyMeter()
 
 void DifficultyMeter::Load()
 {
+	glowoverride = -1;
+	if (!strcmp(this->m_sID,"MeterP1"))
+	{
+		m_textFeet.SetX(FEET_P1_X);
+		m_textMeter.SetX(METER_P1_X);
+
+	} else {
+		m_textFeet.SetX(FEET_P2_X);
+		m_textMeter.SetX(METER_P2_X);
+	}
+	m_textMeter.SetY(METER_Y);
+	m_textFeet.SetY(FEET_Y);
+
 	if( SHOW_FEET )
 	{
 		m_textFeet.SetName( "Feet" );
@@ -64,7 +85,7 @@ void DifficultyMeter::Load()
 		else
 			Feet = "0X";
 		m_textFeet.LoadFromTextureAndChars( THEME->GetPathG(m_sName,"bar"), Feet );
-		SET_XY_AND_ON_COMMAND( &m_textFeet );
+		ON_COMMAND( &m_textFeet );
 		this->AddChild( &m_textFeet );
 	}
 
@@ -80,7 +101,7 @@ void DifficultyMeter::Load()
 	{
 		m_textMeter.SetName( "Meter" );
 		m_textMeter.LoadFromFont( THEME->GetPathF(m_sName,"meter") );
-		SET_XY_AND_ON_COMMAND( m_textMeter );
+		ON_COMMAND( m_textMeter );
 		this->AddChild( &m_textMeter );
 	}
 
@@ -160,15 +181,24 @@ void DifficultyMeter::SetFromMeterAndDifficulty( int iMeter, Difficulty dc )
 
 		CString sNewText;
 		int f;
-		for( f=0; f<NUM_FEET_IN_METER; f++ )
-			sNewText += (f<iMeter) ? on : off;
-		for( f=NUM_FEET_IN_METER; f<MAX_FEET_IN_METER && f<iMeter; f++ )
-			sNewText += on;
+		if (!strcmp(this->m_sID,"MeterP1"))
+		{
+			for( f=NUM_FEET_IN_METER; f<MAX_FEET_IN_METER && f<iMeter; f++ )
+				sNewText += on;
+			for( f=NUM_FEET_IN_METER-1; f>=0; f-- )
+				sNewText += (f<iMeter) ? on : off;
+		} else {
+
+			for( f=0; f<NUM_FEET_IN_METER; f++ )
+				sNewText += (f<iMeter) ? on : off;
+			for( f=NUM_FEET_IN_METER; f<MAX_FEET_IN_METER && f<iMeter; f++ )
+				sNewText += on;
+		}
 
 		m_textFeet.SetText( sNewText );
 
-		if( iMeter > GLOW_IF_METER_GREATER_THAN )
-			m_textFeet.SetEffectGlowShift();
+		if( ((iMeter > GLOW_IF_METER_GREATER_THAN) && (glowoverride != 0)) || ((glowoverride == 1) && (iMeter >= 10)))
+			m_textFeet.Command( FEET_GLOWCOMMAND );
 		else
 			m_textFeet.SetEffectNone();
 

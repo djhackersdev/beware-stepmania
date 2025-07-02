@@ -70,7 +70,8 @@ void LightsManager::Update( float fDeltaTime )
 		ZERO( m_LightsState.m_bCabinetLights );
 		ZERO( m_LightsState.m_bGameButtonLights );
 	}
-
+	int iFrame;
+	bool bStuck = false;
 	switch( m_LightsMode )
 	{
 	case LIGHTSMODE_JOINING:
@@ -113,19 +114,10 @@ void LightsManager::Update( float fDeltaTime )
 			FOREACH_CabinetLight( cl )
 				m_LightsState.m_bCabinetLights[cl] = false;
 
-			int iBeat = (int)(GAMESTATE->m_fSongBeat);
-			int iTopIndex = iBeat;
-			wrap( iTopIndex, 4 );
-			switch( iTopIndex )
-			{
-			case 0:	m_LightsState.m_bCabinetLights[LIGHT_MARQUEE_UP_LEFT]  = true;	break;
-			case 1:	m_LightsState.m_bCabinetLights[LIGHT_MARQUEE_LR_RIGHT] = true;	break;
-			case 2:	m_LightsState.m_bCabinetLights[LIGHT_MARQUEE_UP_RIGHT] = true;	break;
-			case 3:	m_LightsState.m_bCabinetLights[LIGHT_MARQUEE_LR_LEFT]  = true;	break;
-			default:	ASSERT(0);
-			}
+			iFrame = ((int)((RageTimer::GetTimeSinceStart() - m_fLightsModeSince) / 0.266)) % 4;
+			m_LightsState.m_bCabinetLights[iFrame] = true;
 
-			bool bBlinkOn = (iBeat%2)==0;
+			bool bBlinkOn = (iFrame & 2)!=0;
 
 			FOREACH_PlayerNumber( pn )
 			{
@@ -138,16 +130,38 @@ void LightsManager::Update( float fDeltaTime )
 		break;
 	case LIGHTSMODE_DEMONSTRATION:
 	case LIGHTSMODE_GAMEPLAY:
-		FOREACH_CabinetLight( cl )
-			m_LightsState.m_bCabinetLights[cl] = m_fSecsLeftInCabinetLightBlink[cl] > 0;
-		break;
-	case LIGHTSMODE_STAGE:
+		{
+			bool bBlinkOn = false;
+
+			for (int i = 0; i < 4; i++) if (m_fSecsLeftInCabinetLightBlink[i] > 0) bBlinkOn = true;
+		
+			FOREACH_CabinetLight( cl )
+			if ((cl != 4) && (cl != 5))
+				m_LightsState.m_bCabinetLights[cl] = bBlinkOn;
+
+			float timesince = RageTimer::GetTimeSinceStart() - m_fLightsModeSince;
+			if ((timesince > 3.8) && (timesince < 4.8))
+				for (int i = 0; i < 4; i++) m_LightsState.m_bCabinetLights[i] = true;
+
+			if (timesince < 2.5)
+				bStuck = true;
+
+			break;
+		}
 	case LIGHTSMODE_ALL_CLEARED:
 		{
-			FOREACH_CabinetLight( cl )
-				m_LightsState.m_bCabinetLights[cl] = true;
+			iFrame = ((int)((RageTimer::GetTimeSinceStart() - m_fLightsModeSince) / 0.066)) % 4;
+			m_LightsState.m_bCabinetLights[iFrame] = true;
+		}
+		break;	
+
+	case LIGHTSMODE_STAGE:
+		{
+			bStuck = true;
 		}
 		break;
+	case LIGHTSMODE_EVALUATION:
+		break;	
 	case LIGHTSMODE_TEST:
 		{
 			int iSec = (int)RageTimer::GetTimeSinceStart();
@@ -192,17 +206,43 @@ void LightsManager::Update( float fDeltaTime )
 		}
 		break;
 	case LIGHTSMODE_ALL_CLEARED:
-	case LIGHTSMODE_STAGE:
-	case LIGHTSMODE_JOINING:
 		{
+			iFrame = ((int)((RageTimer::GetTimeSinceStart() - m_fLightsModeSince) * 15)) % 4;
+			switch (iFrame)
+			{
+			case 0:
+			m_LightsState.m_bGameButtonLights[0][3] = true;
+			m_LightsState.m_bGameButtonLights[1][3] = true;
+			break;
+			case 1:
+			m_LightsState.m_bGameButtonLights[0][1] = true;
+			m_LightsState.m_bGameButtonLights[1][0] = true;
+			break;
+			case 2:
+			m_LightsState.m_bGameButtonLights[0][2] = true;
+			m_LightsState.m_bGameButtonLights[1][2] = true;
+			break;
+			case 3:
+			m_LightsState.m_bGameButtonLights[0][0] = true;
+			m_LightsState.m_bGameButtonLights[1][1] = true;
+			}
+
 			FOREACH_GameController( gc )
 			{
-				bool bOn = GAMESTATE->m_bSideIsJoined[gc];
 
+				// don't blink unjoined sides
+				if( !GAMESTATE->m_bSideIsJoined[gc] )
+				continue;
 				FOREACH_GameButton( gb )
-					m_LightsState.m_bGameButtonLights[gc][gb] = bOn;
+				{
+					bool bOn = INPUTMAPPER->IsButtonDown( GameInput(gc,gb) );
+					m_LightsState.m_bGameButtonLights[gc][gb] |= bOn;
+				}
 			}
 		}
+		break;	
+	case LIGHTSMODE_STAGE:
+	case LIGHTSMODE_JOINING:
 		break;
 	case LIGHTSMODE_MENU:
 	case LIGHTSMODE_GAMEPLAY:
@@ -240,6 +280,9 @@ void LightsManager::Update( float fDeltaTime )
 			}
 		}
 		break;
+	case LIGHTSMODE_EVALUATION:
+		break;	
+
 	case LIGHTSMODE_TEST:
 		{
 			int iSec = (int)RageTimer::GetTimeSinceStart();
@@ -261,12 +304,12 @@ void LightsManager::Update( float fDeltaTime )
 	}
 
 	// apply new light values we set above
-	m_pDriver->Set( &m_LightsState );
+	if (!bStuck) m_pDriver->Set( &m_LightsState );
 }
 
 void LightsManager::BlinkCabinetLight( CabinetLight cl )
 {
-	m_fSecsLeftInCabinetLightBlink[cl] = LIGHTS_FALLOFF_SECONDS;
+	m_fSecsLeftInCabinetLightBlink[cl] = 0.25 / GAMESTATE->m_fCurBPS; //LIGHTS_FALLOFF_SECONDS;
 }
 
 void LightsManager::BlinkGameButton( GameInput gi )
@@ -276,6 +319,7 @@ void LightsManager::BlinkGameButton( GameInput gi )
 
 void LightsManager::SetLightsMode( LightsMode lm )
 {
+	if (m_LightsMode != lm) m_fLightsModeSince = (int)RageTimer::GetTimeSinceStart();
 	m_LightsMode = lm;
 }
 

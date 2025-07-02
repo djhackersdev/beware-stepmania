@@ -30,6 +30,7 @@ public:
 	bool			m_bShowBanners;
 	enum BackgroundModes { BGMODE_OFF, BGMODE_ANIMATIONS, BGMODE_MOVIEVIS, BGMODE_RANDOMMOVIES } m_BackgroundMode;
 	int				m_iNumBackgrounds;
+	bool			m_bEnableBGAnim;
 	float			m_fBGBrightness;
 	bool			m_bHiddenSongs;
 	bool			m_bVsync;
@@ -137,6 +138,7 @@ public:
 	bool			m_bEasterEggs;
 	int 			m_iMarvelousTiming;
 	bool			m_bEventMode;
+	bool			m_bArcadeEventMode;
 	int				m_iCoinsPerCredit;
 	int				m_iNumArcadeStages;
 
@@ -265,6 +267,7 @@ public:
 	CString			m_sIgnoredMessageWindows;
 
 	CString			m_sCoursesToShowRanking;
+	float			m_fDebounceTime;
 
 	/* Debug: */
 	bool			m_bLogToDisk;

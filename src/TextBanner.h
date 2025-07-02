@@ -17,11 +17,16 @@ public:
 		CString sDisplaySubTitle, CString sTranslitSubTitle, 
 		CString sDisplayArtist, CString sTranslitArtist );
 
-private:
+//private:
 	bool m_bInitted;
 	void Init();
 
 	BitmapText	m_textTitle, m_textSubTitle, m_textArtist;
+
+	// showing a card image instead of text if one is found
+	Sprite				m_sprCard;
+	bool				m_bHasCard;
+
 };
 
 #endif

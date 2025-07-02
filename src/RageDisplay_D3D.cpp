@@ -922,8 +922,8 @@ void RageDisplay_D3D::DrawCompiledGeometryInternal( const RageCompiledGeometry *
 
 /* Use the default poly-based implementation.  D3D lines apparently don't support
  * AA with greater-than-one widths. */
-/*
-void RageDisplay_D3D::DrawLineStrip( const RageSpriteVertex v[], int iNumVerts, float LineWidth )
+
+void RageDisplay_D3D::DrawLineStripInternal( const RageSpriteVertex v[], int iNumVerts, float LineWidth )
 {
 	ASSERT( iNumVerts >= 2 );
 	g_pd3dDevice->SetRenderState( D3DRS_POINTSIZE, *((DWORD*)&LineWidth) );	// funky cast.  See D3DRENDERSTATETYPE doc
@@ -937,7 +937,7 @@ void RageDisplay_D3D::DrawLineStrip( const RageSpriteVertex v[], int iNumVerts, 
 	);
 	StatsAddVerts( iNumVerts );
 }
-*/
+
 
 void RageDisplay_D3D::ClearAllTextures()
 {

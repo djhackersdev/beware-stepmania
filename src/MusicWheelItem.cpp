@@ -21,12 +21,25 @@
 #define SONG_NAME_X		THEME->GetMetricF("MusicWheelItem","SongNameX")
 #define SECTION_NAME_X	THEME->GetMetricF("MusicWheelItem","SectionNameX")
 #define SECTION_ZOOM	THEME->GetMetricF("MusicWheelItem","SectionZoom")
+#define SECTION_ZOOM_X	THEME->GetMetricF("MusicWheelItem","SectionZoomX")
+#define SECTION_ZOOM_Y	THEME->GetMetricF("MusicWheelItem","SectionZoomY")
 #define ROULETTE_X		THEME->GetMetricF("MusicWheelItem","RouletteX")
 #define ROULETTE_ZOOM	THEME->GetMetricF("MusicWheelItem","RouletteZoom")
 #define GRADE_X( p )	THEME->GetMetricF("MusicWheelItem",ssprintf("GradeP%dX",p+1))
+#define ABC_X	THEME->GetMetricF("MusicWheelItem","AbcX")
+#define ABC_ZOOMX	THEME->GetMetricF("MusicWheelItem","AbcZoomX")
+#define ABC_ZOOMY	THEME->GetMetricF("MusicWheelItem","AbcZoomY")
+#define MAX_TEXT_WIDTH	THEME->GetMetricF("MusicWheelItem","MaxTextWidth")
 
-
-
+#define CARD_X		THEME->GetMetricF("TextBanner","CardX")
+#define CARD_Y		THEME->GetMetricF("TextBanner","CardY")
+#define CARD_SECTION_X	THEME->GetMetricF("MusicWheelItem","CardSectionX")
+#define CARD_SECTION_Y	THEME->GetMetricF("MusicWheelItem","CardSectionY")
+#define CARD_COURSE_X	THEME->GetMetricF("MusicWheelItem","CardCourseX")
+#define CARD_COURSE_Y	THEME->GetMetricF("MusicWheelItem","CardCourseY")
+#define CARD_ROULETTE_X	THEME->GetMetricF("MusicWheelItem","CardRouletteX")
+#define CARD_ROULETTE_Y	THEME->GetMetricF("MusicWheelItem","CardRouletteY")
+#define TEXTBANNER2_ONCOMMAND	THEME->GetMetric("MusicWheelItem","TextBanner2OnCommand")
 
 WheelItemData::WheelItemData( WheelItemType wit, Song* pSong, CString sSectionName, Course* pCourse, RageColor color, SortOrder so )
 {
@@ -53,6 +66,17 @@ MusicWheelItem::MusicWheelItem()
 	m_TextBanner.SetHorizAlign( align_left );
 	m_TextBanner.SetXY( SONG_NAME_X, 0 );
 	m_All.AddChild( &m_TextBanner );
+	
+	m_TextBanner2.SetName( "TextBanner2" );
+	m_TextBanner2.SetHorizAlign( align_left );
+	m_TextBanner2.SetXY( SONG_NAME_X, 0 );
+	m_TextBanner2.Command( TEXTBANNER2_ONCOMMAND );
+	m_TextBanner2.m_sprCard.Command( TEXTBANNER2_ONCOMMAND );
+	m_TextBanner2.m_textTitle.Command( TEXTBANNER2_ONCOMMAND );
+	m_TextBanner2.m_textSubTitle.Command( TEXTBANNER2_ONCOMMAND );
+	m_TextBanner2.m_textArtist.Command( TEXTBANNER2_ONCOMMAND );
+	
+	m_All.AddChild( &m_TextBanner2 );
 
 	m_sprSongBar.Load( THEME->GetPathToG("MusicWheelItem song") );
 	m_sprSongBar.SetXY( 0, 0 );
@@ -62,13 +86,15 @@ MusicWheelItem::MusicWheelItem()
 	m_sprSectionBar.SetXY( 0, 0 );
 	m_All.AddChild( &m_sprSectionBar );
 
+	m_textSectionName.SetName("SectionName");
 	m_textSectionName.LoadFromFont( THEME->GetPathToF("MusicWheelItem section") );
 	m_textSectionName.SetShadowLength( 0 );
 	m_textSectionName.SetVertAlign( align_middle );
 	m_textSectionName.SetXY( SECTION_NAME_X, 0 );
-	m_textSectionName.SetZoom( SECTION_ZOOM );
+	m_textSectionName.SetZoomX( SECTION_ZOOM_X );
+	m_textSectionName.SetZoomY( SECTION_ZOOM_Y );
+	ON_COMMAND(m_textSectionName);
 	m_All.AddChild( &m_textSectionName );
-
 
 	m_textRoulette.LoadFromFont( THEME->GetPathToF("MusicWheelItem roulette") );
 	m_textRoulette.SetShadowLength( 0 );
@@ -94,6 +120,9 @@ MusicWheelItem::MusicWheelItem()
 	m_textSort.LoadFromFont( THEME->GetPathToF("MusicWheelItem sort") );
 	SET_XY_AND_ON_COMMAND( &m_textSort );
 	m_All.AddChild( &m_textSort );
+
+	m_sprCard.SetName("Card");
+	m_All.AddChild( &m_sprCard );
 }
 
 
@@ -101,7 +130,7 @@ void MusicWheelItem::LoadFromWheelItemData( WheelItemData* pWID )
 {
 	ASSERT( pWID != NULL );
 	
-	
+	CString temp;
 	
 	data = pWID;
 	/*
@@ -113,6 +142,8 @@ void MusicWheelItem::LoadFromWheelItemData( WheelItemData* pWID )
 	this->m_color			= pWID->m_color;
 	this->m_Type		= pWID->m_Type; */
 
+	m_bHasCard = false;
+	m_sprCard.SetXY(CARD_X,CARD_Y);
 
 	// init type specific stuff
 	switch( pWID->m_Type )
@@ -126,11 +157,40 @@ void MusicWheelItem::LoadFromWheelItemData( WheelItemData* pWID )
 			switch( pWID->m_Type )
 			{
 				case TYPE_SECTION:
-					sDisplayName = SONGMAN->ShortenGroupName(data->m_sSectionName);
+					temp = "Songs/" + data->m_sSectionName + "/card.png";
+					m_bHasCard = IsAFile(temp);
+
+					if (m_bHasCard)
+					{
+						m_sprCard.SetXY(CARD_SECTION_X,CARD_SECTION_Y);
+						m_sprCard.SetZoom(1);
+						m_sprCard.Load(temp);
+						m_sprCard.SetDiffuse( data->m_color );
+						sDisplayName = "";
+					} else
+					{
+						sDisplayName = SONGMAN->ShortenGroupName(data->m_sSectionName);
+					}
+					m_textSectionName.LoadFromFont( THEME->GetPathToF("MusicWheelItem section") );
 					bt = &m_textSectionName;
 					break;
 				case TYPE_COURSE:
-					sDisplayName = data->m_pCourse->GetFullDisplayTitle();
+					temp = SetExtension(data->m_pCourse->m_sPath, "");
+					//temp.Left( temp.GetLength()-4 );
+					temp = temp + "-card.png";
+					m_bHasCard = IsAFile(temp);
+					
+					if (m_bHasCard)
+					{
+						m_sprCard.SetXY(CARD_COURSE_X,CARD_COURSE_Y);
+						m_sprCard.SetZoom(1);
+						m_sprCard.Load(temp);
+						m_sprCard.SetDiffuse( data->m_color );
+						sDisplayName = "";
+					} else
+					{
+						sDisplayName = data->m_pCourse->GetFullDisplayTitle();
+					}
 					sTranslitName = data->m_pCourse->GetFullTranslitTitle();
 					bt = &m_textCourse;
 					break;
@@ -142,31 +202,72 @@ void MusicWheelItem::LoadFromWheelItemData( WheelItemData* pWID )
 					ASSERT(0);
 			}
 
-			bt->SetZoom( 1 );
+			
+			if (sDisplayName == "NUM" && pWID->m_Type == TYPE_SECTION) {
+				m_textSectionName.LoadFromFont( THEME->GetPathToF("MusicWheelItem abc") );
+				bt->SetZoomX( ABC_ZOOMX );
+				bt->SetZoomY( ABC_ZOOMY );
+				m_textSectionName.SetXY( ABC_X, 0 );
+				sDisplayName = "[";
+			} else if (sDisplayName.length() == 1 && pWID->m_Type == TYPE_SECTION) {
+				m_textSectionName.LoadFromFont( THEME->GetPathToF("MusicWheelItem abc") );
+				bt->SetZoomX( ABC_ZOOMX );
+				bt->SetZoomY( ABC_ZOOMY );
+				m_textSectionName.SetXY( ABC_X, 0 );
+			} else {
+				bt->SetZoomX( SECTION_ZOOM_X );
+				bt->SetZoomY( SECTION_ZOOM_Y );
+				m_textSectionName.SetXY( SECTION_NAME_X, 0 );
+			}
 			bt->SetText( sDisplayName, sTranslitName );
 			bt->SetDiffuse( data->m_color );
 			bt->TurnRainbowOff();
-
-			const float fSourcePixelWidth = (float)bt->GetUnzoomedWidth();
-			const float fMaxTextWidth = 200;
+			
+			const float fSourcePixelWidth = (float)bt->GetUnzoomedWidth() * bt->GetZoomX();
+			const float fMaxTextWidth = MAX_TEXT_WIDTH;
 			if( fSourcePixelWidth > fMaxTextWidth  )
-				bt->SetZoomX( fMaxTextWidth / fSourcePixelWidth );
+			{
+				const float factor = fMaxTextWidth / fSourcePixelWidth;
+				bt->SetZoomX( bt->GetZoomX() * factor );
+				bt->SetZoomY( bt->GetZoomY() * factor );
+			}
 		}
 		break;
 	case TYPE_SONG:
 		{
 			m_TextBanner.LoadFromSong( data->m_pSong );
 			m_TextBanner.SetDiffuse( data->m_color );
+			
+			RageColor tempcolor;
+
+			if ((data->m_color.r == 0.0) && (data->m_color.b == 1.0) && (data->m_color.a == 1.0)
+				&& (data->m_color.g >= 0.7) && (data->m_color.g <= 0.85))
+			{
+				tempcolor = RageColor(0,0,1,1);
+			} else tempcolor = RageColor(0,0,0,0);
+
+			
+			m_TextBanner2.LoadFromSong( data->m_pSong );
+			m_TextBanner2.SetDiffuse( tempcolor );
+			
 			m_WheelNotifyIcon.SetFlags( data->m_Flags );
 			RefreshGrades();
 		}
 		break;
 	case TYPE_ROULETTE:
-		m_textRoulette.SetText( THEME->GetMetric("MusicWheel","Roulette") );
+		m_sprCard.SetXY(CARD_ROULETTE_X,CARD_ROULETTE_Y);
+		m_sprCard.SetDiffuse( RageColor(1,1,1,1) );
+		m_sprCard.SetZoom(1);
+		m_sprCard.Load(THEME->GetPathToG("MusicWheelItem roulette"));
+		m_bHasCard = true;
 		break;
 
 	case TYPE_RANDOM:
-		m_textRoulette.SetText( THEME->GetMetric("MusicWheel","Random") );
+		m_sprCard.SetXY(CARD_ROULETTE_X,CARD_ROULETTE_Y);
+		m_sprCard.SetDiffuse( RageColor(1,1,1,1) );
+		m_sprCard.SetZoom(1);
+		m_sprCard.Load(THEME->GetPathToG("MusicWheelItem random"));
+		m_bHasCard = true;
 		break;
 
 	case TYPE_PORTAL:
@@ -200,6 +301,10 @@ void MusicWheelItem::RefreshGrades()
 			grade = PROFILEMAN->GetHighScoreForDifficulty( data->m_pSong, GAMESTATE->GetCurrentStyle(), (ProfileSlot)p, dc ).grade;
 		else
 			grade = PROFILEMAN->GetHighScoreForDifficulty( data->m_pSong, GAMESTATE->GetCurrentStyle(), PROFILE_SLOT_MACHINE, dc ).grade;
+		if (grade == GRADE_TIER_1)
+			grade = GRADE_TIER_2;
+		if (grade == GRADE_NO_DATA)
+			grade = GRADE_TIER_1;
 
 		m_GradeDisplay[p].SetGrade( (PlayerNumber)p, grade );
 	}
@@ -210,6 +315,9 @@ void MusicWheelItem::RefreshGrades()
 void MusicWheelItem::Update( float fDeltaTime )
 {
 	Actor::Update( fDeltaTime );
+
+	if (m_bHasCard)
+	m_sprCard.Update( fDeltaTime );
 
 	switch( data->m_Type )
 	{
@@ -228,6 +336,7 @@ void MusicWheelItem::Update( float fDeltaTime )
 			m_sprSongBar.Update( fDeltaTime );
 			m_WheelNotifyIcon.Update( fDeltaTime );
 			m_TextBanner.Update( fDeltaTime );
+			m_TextBanner2.Update( fDeltaTime );
 			FOREACH_PlayerNumber( p )
 				m_GradeDisplay[p].Update( fDeltaTime );
 		}
@@ -266,6 +375,8 @@ void MusicWheelItem::DrawPrimitives()
 	
 	bar->Draw();
 
+	if (m_bHasCard) m_sprCard.Draw();
+
 	switch( data->m_Type )
 	{
 	case TYPE_SECTION:
@@ -278,6 +389,7 @@ void MusicWheelItem::DrawPrimitives()
 		break;
 	case TYPE_SONG:		
 		m_TextBanner.Draw();
+		m_TextBanner2.Draw();
 		m_WheelNotifyIcon.Draw();
 		FOREACH_PlayerNumber( p )
 			m_GradeDisplay[p].Draw();
@@ -297,7 +409,7 @@ void MusicWheelItem::DrawPrimitives()
 		bar->SetGlow( RageColor(0,0,0,m_fPercentGray) );
 		bar->SetDiffuse( RageColor(0,0,0,0) );
 		bar->Draw();
-		bar->SetDiffuse( RageColor(0,0,0,1) );
+		bar->SetDiffuse( RageColor(1,1,1,1) ); //make the background fade to black properly -beware
 		bar->SetGlow( RageColor(0,0,0,0) );
 	}
 }

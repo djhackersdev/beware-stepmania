@@ -50,7 +50,7 @@ Combo::Combo()
 	SHOW_MISS_COMBO.Refresh();
 
 	m_sprComboLabel.Load( THEME->GetPathToG( "Combo label") );
-	m_sprComboLabel.SetShadowLength( 4 );
+	m_sprComboLabel.SetShadowLength( 0 );
 	m_sprComboLabel.StopAnimating();
 	m_sprComboLabel.SetXY( LABEL_X, LABEL_Y );
 	m_sprComboLabel.SetHorizAlign( (Actor::HorizAlign)(int)LABEL_HORIZ_ALIGN );
@@ -59,7 +59,7 @@ Combo::Combo()
 	this->AddChild( &m_sprComboLabel );
 
 	m_sprMissesLabel.Load( THEME->GetPathToG( "Combo misses") );
-	m_sprMissesLabel.SetShadowLength( 4 );
+	m_sprMissesLabel.SetShadowLength( 0 );
 	m_sprMissesLabel.StopAnimating();
 	m_sprMissesLabel.SetXY( LABEL_X, LABEL_Y );
 	m_sprMissesLabel.SetHorizAlign( (Actor::HorizAlign)(int)LABEL_HORIZ_ALIGN );
@@ -68,7 +68,7 @@ Combo::Combo()
 	this->AddChild( &m_sprMissesLabel );
 
 	m_textNumber.LoadFromFont( THEME->GetPathToF("Combo") );
-	m_textNumber.SetShadowLength( 4 );
+	m_textNumber.SetShadowLength( 0 );
 	m_textNumber.SetXY( NUMBER_X, NUMBER_Y );
 	m_textNumber.SetHorizAlign( (Actor::HorizAlign)(int)NUMBER_HORIZ_ALIGN );
 	m_textNumber.SetVertAlign( (Actor::VertAlign)(int)NUMBER_VERT_ALIGN );

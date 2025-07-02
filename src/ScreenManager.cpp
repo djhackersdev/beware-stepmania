@@ -53,6 +53,8 @@ ScreenManager*	SCREENMAN = NULL;	// global and accessable from anywhere in our p
 #define CREDITS_CREDITS			THEME->GetMetric ("ScreenSystemLayer","CreditsCredits")
 #define CREDITS_NOT_PRESENT		THEME->GetMetric ("ScreenSystemLayer","CreditsNotPresent")
 #define CREDITS_JOIN_ONLY		THEME->GetMetricB("ScreenSystemLayer","CreditsJoinOnly")
+#define CREDITS_NO_CARD		THEME->GetMetricB("ScreenSystemLayer","CreditsNoCard")
+#define CREDITS_EVENT		THEME->GetMetric ("ScreenSystemLayer","CreditsTextEvent")
 
 const int NUM_SKIPS_TO_SHOW = 5;
 
@@ -188,6 +190,8 @@ void ScreenSystemLayer::RefreshCreditsMessages()
 		else 
 			bShowCreditsMessage = !GAMESTATE->m_bSideIsJoined[p];
 		
+		if ( (PREFSMAN->GetCoinMode() != COIN_HOME) && CREDITS_NO_CARD ) bShowCreditsMessage = 1;
+
 		if( !bShowCreditsMessage )
 		{
 			MemoryCardState mcs = MEMCARDMAN->GetCardState( p );
@@ -233,26 +237,33 @@ void ScreenSystemLayer::RefreshCreditsMessages()
 					int Credits = GAMESTATE->m_iCoins / PREFSMAN->m_iCoinsPerCredit;
 					int Coins = GAMESTATE->m_iCoins % PREFSMAN->m_iCoinsPerCredit;
 					sCredits = CREDITS_CREDITS;
+					if( Credits < 10) sCredits += " ";
 					if( Credits > 0 || PREFSMAN->m_iCoinsPerCredit == 1 )
-						sCredits += ssprintf("  %d", Credits);
+						sCredits += ssprintf("%d", Credits);
 					if( PREFSMAN->m_iCoinsPerCredit > 1 )
-						sCredits += ssprintf("  %d/%d", Coins, PREFSMAN->m_iCoinsPerCredit );
+						sCredits += ssprintf("%d/%d", Coins, PREFSMAN->m_iCoinsPerCredit );
 				}
 				break;
 			case COIN_FREE:
-				if( GAMESTATE->PlayersCanJoin() )
 					sCredits = CREDITS_FREE_PLAY;
-				else
-					sCredits = CREDITS_NOT_PRESENT;
 				break;
 			default:
 				ASSERT(0);
 			}
 		}
-
 		if( CREDITS_JOIN_ONLY && !GAMESTATE->PlayersCanJoin() )
 			sCredits = "";
-		m_textCredits[p].SetText( sCredits );
+
+		if ( (PREFSMAN->m_bEventMode || PREFSMAN->m_bArcadeEventMode) && bShowCreditsMessage && (PREFSMAN->GetCoinMode() == COIN_FREE))
+		{
+			m_textCredits[p].SetText( CREDITS_EVENT );
+			m_textCredits[p].SetX(320);
+		} else {
+			m_textCredits[p].SetText( sCredits );
+			SET_XY( m_textCredits[p] );
+		}
+
+			
 	}
 }
 

@@ -19,7 +19,7 @@
 #include <set>
 
 
-const float FADE_SECONDS = 1.0f;
+const float FADE_SECONDS = 0.5f;
 
 #define LEFT_EDGE			THEME->GetMetricF("Background","LeftEdge")
 #define TOP_EDGE			THEME->GetMetricF("Background","TopEdge")
@@ -330,6 +330,9 @@ void Background::LoadFromSong( const Song* pSong )
 	// start off showing the static song background
 	m_aBGChanges.push_back( BackgroundChange(-10000,STATIC_BACKGROUND) );
 
+	//disable bg videos/animations completely
+	if ( PREFSMAN->m_bEnableBGAnim == false )
+		return;
 
 	if( pSong->HasBGChanges() )
 	{
@@ -444,10 +447,15 @@ int Background::FindBGSegmentForBeat( float fBeat ) const
 	return i;
 }
 
+bool glitchfadeflag=false;
+
 /* If the BG segment has changed, move focus to it.  Send Update() calls. */
 void Background::UpdateCurBGChange( float fCurrentTime )
 {
 	ASSERT( fCurrentTime != GameState::MUSIC_SECONDS_INVALID );
+
+	fCurrentTime = fCurrentTime + 0.033;
+	//compensate a bit for the fade delay hack, make the bg a bit ahead
 
 	if( m_aBGChanges.size() == 0 )
 		return;
@@ -472,10 +480,10 @@ void Background::UpdateCurBGChange( float fCurrentTime )
 
 		BGAnimation* pOld = m_pCurrentBGA;
 
-		if( change.m_bFadeLast )
+		//if( change.m_bFadeLast )
 			m_pFadingBGA = m_pCurrentBGA;
-		else
-			m_pFadingBGA = NULL;
+		//else
+		//	m_pFadingBGA = NULL;
 
 		m_pCurrentBGA = m_BGAnimations[ change.m_sBGName ];
 
@@ -484,7 +492,8 @@ void Background::UpdateCurBGChange( float fCurrentTime )
 		if( m_pCurrentBGA )
 			m_pCurrentBGA->GainFocus( change.m_fRate, change.m_bRewindMovie, change.m_bLoop );
 
-		m_fSecsLeftInFade = m_pFadingBGA!=NULL ? FADE_SECONDS : 0;
+		m_fSecsLeftInFade = change.m_bFadeLast ? FADE_SECONDS : 0.066;
+		glitchfadeflag = !change.m_bFadeLast;
 
 		/* How much time of this BGA have we skipped?  (This happens with SetSeconds.) */
 		const float fStartSecond = m_pSong->m_Timing.GetElapsedTimeFromBeat( change.m_fStartBeat );
@@ -540,9 +549,11 @@ void Background::Update( float fDeltaTime )
 		m_pFadingBGA->Update( fDeltaTime );
 		m_fSecsLeftInFade -= fDeltaTime;
 		float fPercentOpaque = m_fSecsLeftInFade / FADE_SECONDS;
-		m_pFadingBGA->SetDiffuse( RageColor(1,1,1,fPercentOpaque) );
-		if( fPercentOpaque <= 0 )
+		if (!glitchfadeflag)
+			m_pFadingBGA->SetDiffuse( RageColor(1,1,1,fPercentOpaque) );
+		if( m_fSecsLeftInFade <= 0 )
 		{
+			glitchfadeflag = false;
 			/* Reset its diffuse color, in case we reuse it. */
 			m_pFadingBGA->SetDiffuse( RageColor(1,1,1,1) );
 			m_pFadingBGA = NULL;
@@ -597,6 +608,17 @@ bool Background::IsDangerAllVisible()
 	if( !PREFSMAN->m_bShowDanger )
 		return false;
 
+	FOREACH_PlayerNumber( p )
+	{
+		if( !GAMESTATE->IsHumanPlayer(p) )
+			continue;
+
+		// Disable danger if BH shows
+		if( PREFSMAN->m_bShowBeginnerHelper && BeginnerHelper::CanUse() && 
+			GAMESTATE->m_pCurSteps[p] && GAMESTATE->m_pCurSteps[p]->GetDifficulty() == DIFFICULTY_BEGINNER )
+			return false;
+	}
+
 	/* Don't show it if everyone is already failing: it's already too late and it's
 	 * annoying for it to show for the entire duration of a song. */
 	if( g_CurStageStats.AllFailedEarlier() )
@@ -606,7 +628,7 @@ bool Background::IsDangerAllVisible()
 		return false;
 
 	if( BLINK_DANGER_ALL )
-		return (RageTimer::GetTimeSinceStart() - (int)RageTimer::GetTimeSinceStart()) < 0.5f;
+		return (((int)GAMESTATE->m_fSongBeat & 1) == 1);
 	else
 		return true;
 }

@@ -33,9 +33,10 @@ protected:
 	Sprite		m_sprExplanation;
 	Sprite		m_sprWarning;
 	Sprite		m_sprPremium;
-	
+	Sprite		m_sprChar[MAX_MODE_CHOICES][2];
+	Sprite		m_sprPad[MAX_MODE_CHOICES][2];
 	RageSound m_soundChange;
-
+	int m_currentplayer;
 	int m_iSelection;
 };
 

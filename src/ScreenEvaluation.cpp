@@ -46,6 +46,9 @@ const char* STATS_STRING[NUM_STATS_LINES] =
 #define SPIN_GRADES							THEME->GetMetricB(m_sName,"SpinGrades")
 #define CHEER_DELAY_SECONDS					THEME->GetMetricF(m_sName,"CheerDelaySeconds")
 #define BAR_ACTUAL_MAX_COMMAND				THEME->GetMetric (m_sName,"BarActualMaxCommand")
+#define BAR_ACTUAL_ALL_MAX_COMMAND				THEME->GetMetric (m_sName,"BarActualAllMaxCommand")
+#define MAX_COMBO_MAX_COMMAND				THEME->GetMetric (m_sName,"MaxComboMaxCommand")
+#define MAX_COMBO_ALL_MAX_COMMAND				THEME->GetMetric (m_sName,"MaxComboAllMaxCommand")
 
 // metrics that are specific to classes derived from ScreenEvaluation
 #define FAILED_SCREEN						THEME->GetMetric (m_sName, "FailedScreen")
@@ -64,6 +67,7 @@ const char* STATS_STRING[NUM_STATS_LINES] =
 #define SHOW_TIME_AREA						THEME->GetMetricB(m_sName,"ShowTimeArea")
 #define SHOW_GRAPH_AREA						THEME->GetMetricB(m_sName,"ShowGraphArea")
 #define SHOW_COMBO_AREA						THEME->GetMetricB(m_sName,"ShowComboArea")
+#define SHOW_PERCENT_BAR					THEME->GetMetricB(m_sName,"ShowPercentBar")
 #define SHOW_PER_DIFFICULTY_AWARD			THEME->GetMetricB(m_sName,"ShowPerDifficultyAward")
 #define SHOW_PEAK_COMBO_AWARD				THEME->GetMetricB(m_sName,"ShowPeakComboAward")
 #define GRAPH_START_HEIGHT					THEME->GetMetricF(m_sName,"GraphStartHeight")
@@ -167,7 +171,7 @@ void ScreenEvaluation::Init()
 
 	LOG->Trace( "ScreenEvaluation::ScreenEvaluation()" );
 
-	LIGHTSMAN->SetLightsMode( LIGHTSMODE_MENU );
+	LIGHTSMAN->SetLightsMode( LIGHTSMODE_EVALUATION );
 
 	m_bFailed = g_CurStageStats.AllFailed();
 
@@ -331,6 +335,16 @@ void ScreenEvaluation::Init()
 			break;
 		case summary:
 			{
+				float posX = THEME->GetMetricF(m_sName,"SmallBanner1X");
+				float posY = THEME->GetMetricF(m_sName,"SmallBanner1Y");
+
+				float diffX = (THEME->GetMetricF(m_sName,"SmallBanner5X") - posX);
+				float diffY = (THEME->GetMetricF(m_sName,"SmallBanner5Y") - posY);
+				if (stageStats.vpSongs.size() > 1)
+				{
+					diffX = diffX / (stageStats.vpSongs.size() - 1);
+					diffY = diffY / (stageStats.vpSongs.size() - 1);
+				}
 				for( unsigned i=0; i<stageStats.vpSongs.size(); i++ )
 				{
 					Song *pSong = stageStats.vpSongs[i];
@@ -338,13 +352,20 @@ void ScreenEvaluation::Init()
 					m_SmallBanner[i].LoadFromSong( pSong );
 					m_SmallBanner[i].ScaleToClipped( BANNER_WIDTH, BANNER_HEIGHT );
 					m_SmallBanner[i].SetName( ssprintf("SmallBanner%d",i+1) );
-					SET_XY_AND_ON_COMMAND( m_SmallBanner[i] );
+					m_SmallBanner[i].SetX(floor(posX));
+					m_SmallBanner[i].SetY(floor(posY));
+					ON_COMMAND( m_SmallBanner[i] );
 					this->AddChild( &m_SmallBanner[i] );
 
 					m_sprSmallBannerFrame[i].Load( THEME->GetPathToG("ScreenEvaluation banner frame") );
 					m_sprSmallBannerFrame[i]->SetName( ssprintf("SmallBanner%d",i+1) );
-					SET_XY_AND_ON_COMMAND( m_sprSmallBannerFrame[i] );
+					m_sprSmallBannerFrame[i]->SetX(floor(posX));
+					m_sprSmallBannerFrame[i]->SetY(floor(posY));
+					ON_COMMAND( m_sprSmallBannerFrame[i] );
 					this->AddChild( m_sprSmallBannerFrame[i] );
+
+					posX += diffX;
+					posY += diffY;
 				}
 			}
 			break;
@@ -407,7 +428,7 @@ void ScreenEvaluation::Init()
 					SET_XY_AND_ON_COMMAND( m_DifficultyMeter[p] );
 					this->AddChild( &m_DifficultyMeter[p] );
 					
-					m_textPlayerOptions[p].LoadFromFont( THEME->GetPathToF("Common normal") );
+					m_textPlayerOptions[p].LoadFromFont( THEME->GetPathToF("Screenevaluation playeroptions") );
 					CString sPO = GAMESTATE->m_PlayerOptions[p].GetThemedString();
 					sPO.Replace( ", ", PLAYER_OPTIONS_SEPARATOR );
 					m_textPlayerOptions[p].SetName( ssprintf("PlayerOptionsP%d",p+1) );
@@ -480,13 +501,23 @@ void ScreenEvaluation::Init()
 			SET_XY_AND_ON_COMMAND( m_sprGradeFrame[p] );
 			this->AddChild( m_sprGradeFrame[p] );
 
-			m_Grades[p].Load( THEME->GetPathToG("ScreenEvaluation grades") );
+//			m_Grades[p].Load( THEME->GetPathToG("ScreenEvaluation grades") );
+			m_Grades[p].Load( THEME->GetPathToG("ScreenEvaluation ex_order_grades") );
 			m_Grades[p].SetGrade( (PlayerNumber)p, grade[p] );
 			m_Grades[p].SetName( ssprintf("GradeP%d",p+1) );
 			SET_XY_AND_ON_COMMAND( m_Grades[p] );
 			if( SPIN_GRADES )
 				m_Grades[p].Spin();
 			this->AddChild( &m_Grades[p] );
+
+			m_Grades2[p].Load( THEME->GetPathToG("ScreenEvaluation ex_order_grades") );
+			m_Grades2[p].SetGrade( (PlayerNumber)p, grade[p] );
+			m_Grades2[p].SetName( ssprintf("Grade2P%d",p+1) );
+			SET_XY_AND_ON_COMMAND( m_Grades2[p] );
+			if( SPIN_GRADES )
+				m_Grades2[p].Spin();
+			this->AddChild( &m_Grades2[p] );
+
 
 			m_sprGrade[p].Load( THEME->GetPathToG( "ScreenEvaluation grade "+ GradeToString(grade[p]) ) );
 			m_sprGrade[p]->SetName( ssprintf("GradeP%d",p+1) );
@@ -518,6 +549,11 @@ void ScreenEvaluation::Init()
 		}
 	}
 
+	float divider = 1.0f;
+	if ((m_Type == course) && GAMESTATE->m_pCurCourse && GAMESTATE->m_pCurCourse->m_entries.size())
+		divider = divider / GAMESTATE->m_pCurCourse->m_entries.size();
+
+
 	//
 	// init bonus area
 	//
@@ -530,17 +566,19 @@ void ScreenEvaluation::Init()
 			SET_XY_AND_ON_COMMAND( m_sprBonusFrame[p] );
 			this->AddChild( m_sprBonusFrame[p] );
 
+			bool bAllMax = (grade[p] == GRADE_TIER_1) || (grade[p] == GRADE_TIER_2);
+
 			for( int r=0; r<NUM_SHOWN_RADAR_CATEGORIES; r++ )	// foreach line
 			{
 				m_sprPossibleBar[p][r].Load( THEME->GetPathToG(ssprintf("ScreenEvaluation bar possible p%d",p+1)) );
-				m_sprPossibleBar[p][r].SetWidth( m_sprPossibleBar[p][r].GetUnzoomedWidth() * stageStats.radarPossible[p][r] );
+				m_sprPossibleBar[p][r].SetWidth( m_sprPossibleBar[p][r].GetUnzoomedWidth() * stageStats.radarPossible[p][r] * divider);
 				m_sprPossibleBar[p][r].SetName( ssprintf("BarPossible%dP%d",r+1,p+1) );
 				SET_XY_AND_ON_COMMAND( m_sprPossibleBar[p][r] );
 				this->AddChild( &m_sprPossibleBar[p][r] );
 
 				m_sprActualBar[p][r].Load( THEME->GetPathToG(ssprintf("ScreenEvaluation bar actual p%d",p+1)) );
 				// should be out of the possible bar, not actual (whatever value that is at)
-				m_sprActualBar[p][r].SetWidth( m_sprPossibleBar[p][r].GetUnzoomedWidth() * stageStats.radarActual[p][r] );
+				m_sprActualBar[p][r].SetWidth( m_sprPossibleBar[p][r].GetUnzoomedWidth() * stageStats.radarActual[p][r] * divider);
 				
 				float value = (float)100 * m_sprActualBar[p][r].GetUnzoomedWidth() / m_sprPossibleBar[p][r].GetUnzoomedWidth();
 				LOG->Trace("Radar bar %d of 5 - %f percent", r,  value);
@@ -549,7 +587,9 @@ void ScreenEvaluation::Init()
 				SET_XY_AND_ON_COMMAND( m_sprActualBar[p][r] );
 				
 				// .99999 is fairly close to 1.00, so we use that 
-				if( stageStats.radarActual[p][r] > 0.99999f )
+				if (bAllMax)
+					m_sprActualBar[p][r].Command( BAR_ACTUAL_ALL_MAX_COMMAND );				
+				else if( (stageStats.radarActual[p][r] * divider) > 0.99999f )
 					m_sprActualBar[p][r].Command( BAR_ACTUAL_MAX_COMMAND );
 				this->AddChild( &m_sprActualBar[p][r] );
 			}
@@ -573,9 +613,28 @@ void ScreenEvaluation::Init()
 			// curewater: edited the "# stages cleared" text so it deducts one if you failed.
 			// Should be accurate, but I'm not sure if its "standard" that (bool)true = 1.  (assumption)
 			m_textSurvivedNumber[p].SetText( ssprintf("%02d", stageStats.iSongsPlayed[p] - (int)stageStats.bFailed[p]) );
+			if (!stageStats.bFailed[p])
+				m_textSurvivedNumber[p].Command( BAR_ACTUAL_ALL_MAX_COMMAND ); 
 			m_textSurvivedNumber[p].SetName( ssprintf("SurvivedNumberP%d",p+1) );
 			SET_XY_AND_ON_COMMAND( m_textSurvivedNumber[p] );
 			this->AddChild( &m_textSurvivedNumber[p] );
+		}
+	}
+
+	if( SHOW_PERCENT_BAR )
+	{
+		FOREACH_EnabledPlayer( p )
+		{
+			m_sprPossibleBar[p][0].Load( THEME->GetPathToG(ssprintf("ScreenEvaluation percentbar possible p%d",p+1)) );
+			m_sprPossibleBar[p][0].SetName( ssprintf("PercentBarPossibleP%d",p+1) );
+			SET_XY_AND_ON_COMMAND( m_sprPossibleBar[p][0] );
+			this->AddChild( &m_sprPossibleBar[p][0] );
+			
+			m_sprActualBar[p][0].Load( THEME->GetPathToG(ssprintf("ScreenEvaluation percentbar actual p%d",p+1)) );
+			m_sprActualBar[p][0].SetCropTop( 1 - stageStats.GetPercentDancePoints(p) );
+			m_sprActualBar[p][0].SetName( ssprintf("PercentBarActualP%d",p+1) );
+			SET_XY_AND_ON_COMMAND( m_sprActualBar[p][0] );
+			this->AddChild( &m_sprActualBar[p][0] );
 		}
 	}
 	
@@ -600,6 +659,17 @@ void ScreenEvaluation::Init()
 			this->AddChild( &m_sprWin[p] );
 		}
 	}
+
+	FOREACH_EnabledPlayer( p )
+	{
+		m_textMaxCombo2[p].LoadFromFont( THEME->GetPathF(m_sName, "_combo2"));
+		m_textMaxCombo2[p].SetShadowLength( 0 );
+		m_textMaxCombo2[p].SetDiffuse( PlayerToColor(p) );
+		m_textMaxCombo2[p].SetName( ssprintf("MaxCombo2NumberP%d",p+1) );
+		SET_XY_AND_ON_COMMAND( m_textMaxCombo2[p] );
+		this->AddChild( &m_textMaxCombo2[p] );
+		m_textMaxCombo2[p].SetText( ssprintf("%*d",MAX_COMBO_NUM_DIGITS ,stageStats.GetMaxCombo(p).cnt) );
+	}
 	
 	//
 	// init judgment area
@@ -621,7 +691,8 @@ void ScreenEvaluation::Init()
 
 			FOREACH_EnabledPlayer( p )
 			{
-				m_textJudgeNumbers[l][p].LoadFromFont( THEME->GetPathF(m_sName, "judge") );
+
+				m_textJudgeNumbers[l][p].LoadFromFont( THEME->GetPathF(m_sName, (l==max_combo) ? "combo" : "judge"));
 				m_textJudgeNumbers[l][p].SetShadowLength( 0 );
 				m_textJudgeNumbers[l][p].SetDiffuse( PlayerToColor(p) );
 				m_textJudgeNumbers[l][p].SetName( ssprintf("%sNumberP%d",JUDGE_STRING[l],p+1) );
@@ -644,8 +715,25 @@ void ScreenEvaluation::Init()
 				}
 
 				// UGLY... generalize this
-				int iNumDigits = (l==max_combo) ? MAX_COMBO_NUM_DIGITS : 4;
+				int iNumDigits = (l==max_combo) ? MAX_COMBO_NUM_DIGITS : 3;
+                                // beware's ugly way to decide on 3 or 4 digits
+				if (stageStats.iTapNoteScores[p][TNS_MARVELOUS] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][TNS_PERFECT] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][TNS_GREAT] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][TNS_GOOD] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][TNS_BOO] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][TNS_MISS] >= 1000) iNumDigits = 4;
+                                if (stageStats.iTapNoteScores[p][HNS_OK] >= 1000) iNumDigits = 4;
+				if ((m_Type == summary) || (m_Type == course)) iNumDigits = 4;
 				m_textJudgeNumbers[l][p].SetText( ssprintf("%*d",iNumDigits,iValue) );
+
+                                //if AAA, combo digits flash faster
+				if ((l==max_combo) && ((grade[p] == GRADE_TIER_1) || (grade[p] == GRADE_TIER_2)))
+					m_textJudgeNumbers[l][p].Command( MAX_COMBO_ALL_MAX_COMMAND );
+				else 
+                                //if full combo, flash combo digits - FC is same as flashing stream banner so use that -beware
+				if ((l==max_combo) && ((stageStats.radarActual[p][1] * divider) > 0.99999f)) m_textJudgeNumbers[l][p].Command( MAX_COMBO_MAX_COMMAND );
+
 			}
 		}
 	}
@@ -698,7 +786,7 @@ void ScreenEvaluation::Init()
 			m_textScore[p].SetDiffuse( PlayerToColor(p) );
 			m_textScore[p].SetName( ssprintf("ScoreNumberP%d",p+1) );
 			SET_XY_AND_ON_COMMAND( m_textScore[p] );
-			m_textScore[p].SetText( ssprintf("%*.0i", NUM_SCORE_DIGITS, stageStats.iScore[p]) );
+			m_textScore[p].SetText( ssprintf("%*i", NUM_SCORE_DIGITS, stageStats.iScore[p]) );
 			this->AddChild( &m_textScore[p] );
 		}
 	}
@@ -757,14 +845,14 @@ void ScreenEvaluation::Init()
 	//
 	FOREACH_PlayerNumber( p )
 	{
-		if( iMachineHighScoreIndex[p] != -1 )
-		{
-			m_sprMachineRecord[p].Load( THEME->GetPathG( "ScreenEvaluation", ssprintf("MachineRecord %02d",iMachineHighScoreIndex[p]+1) ) );
-			m_sprMachineRecord[p]->SetName( ssprintf("MachineRecordP%d",p+1) );
-			m_sprMachineRecord[p]->StopAnimating();
-			SET_XY_AND_ON_COMMAND( m_sprMachineRecord[p] );
-			this->AddChild( m_sprMachineRecord[p] );
-		}
+//		if( iMachineHighScoreIndex[p] != -1 )
+//		{
+//			m_sprMachineRecord[p].Load( THEME->GetPathG( "ScreenEvaluation", ssprintf("MachineRecord %02d",iMachineHighScoreIndex[p]+1) ) );
+//			m_sprMachineRecord[p]->SetName( ssprintf("MachineRecordP%d",p+1) );
+//			m_sprMachineRecord[p]->StopAnimating();
+//			SET_XY_AND_ON_COMMAND( m_sprMachineRecord[p] );
+//			this->AddChild( m_sprMachineRecord[p] );
+//		}
 		if( iPersonalHighScoreIndex[p] != -1 )
 		{
 			m_sprPersonalRecord[p].Load( THEME->GetPathG( "ScreenEvaluation", ssprintf("PersonalRecord %02d",iPersonalHighScoreIndex[p]+1) ) );
@@ -795,7 +883,7 @@ void ScreenEvaluation::Init()
 
 	bool bOneHasNewTopRecord = false;
 	FOREACH_PlayerNumber( p )
-		if( GAMESTATE->IsPlayerEnabled(p) && (iMachineHighScoreIndex[p] != -1 || iPersonalHighScoreIndex[p] != -1) )
+		if( GAMESTATE->IsPlayerEnabled(p) && (iPersonalHighScoreIndex[p] != -1) )
 			bOneHasNewTopRecord = true;
 
 	Grade best_grade = GRADE_NO_DATA;
@@ -835,13 +923,24 @@ void ScreenEvaluation::Init()
 				}
 				break;
 			default:
-				SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation "+GradeToOldString(best_grade)) );
+				if (GAMESTATE->IsFinalStage() || GAMESTATE->IsExtraStage() || GAMESTATE->IsExtraStage2())
+				{
+					//final state or extra stage, and no more to try. this is the last screen before the summary
+					SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation final") );
+					SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation final "+GradeToOldString(best_grade)) );
+				}
+				else
+				{
+					SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation "+GradeToOldString(best_grade)) );
+				}
 				break;
 			}
 			break;
 		case course:
-		case summary:
+			SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation final") );
 			SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("evaluation final "+GradeToOldString(best_grade)) );
+		case summary:
+			//ddr extreme does not play this comment in the summary screen, but on the last stage's screen.
 			break;
 		default:
 			ASSERT(0);
@@ -906,6 +1005,10 @@ void ScreenEvaluation::CommitScores(
 	if( !GAMESTATE->m_SongOptions.m_bSaveScore )
 		return;
 
+	// don't save if failed and nonstop course -beware
+	if ( m_bFailed && (m_Type == course) && !SHOW_POINTS_AREA)
+		return;
+
 	LOG->Trace( "saving stats and high scores" );
 
 	{
@@ -925,7 +1028,11 @@ void ScreenEvaluation::CommitScores(
 			HighScore &hs = m_HighScore[p];
 			hs.sName = RANKING_TO_FILL_IN_MARKER[p];
 			hs.grade = stageStats.GetGrade( p );
-			hs.iScore = stageStats.iScore[p];
+			// for oni courses, save the points instead of the score -beware
+			if (SHOW_POINTS_AREA && !SHOW_SCORE_AREA)
+				hs.iScore = stageStats.iActualDancePoints[p];
+			else
+				hs.iScore = stageStats.iScore[p];
 			hs.fPercentDP = stageStats.GetPercentDancePoints( p );
 			hs.fSurviveSeconds = stageStats.fAliveSeconds[p];
 			hs.sModifiers = GAMESTATE->m_PlayerOptions[p].GetString();
@@ -974,8 +1081,8 @@ void ScreenEvaluation::CommitScores(
 					Course* pCourse = GAMESTATE->m_pCurCourse;
 					ASSERT( pCourse );
 					Trail* pTrail = GAMESTATE->m_pCurTrail[p];
-
-					PROFILEMAN->AddCourseScore( pCourse, pTrail, p, hs, iPersonalHighScoreIndexOut[p], iMachineHighScoreIndexOut[p] );
+					if (!(PREFSMAN->m_bEventMode || PREFSMAN->m_bArcadeEventMode)) //in event mode, do not save the high score of a course -beware
+						PROFILEMAN->AddCourseScore( pCourse, pTrail, p, hs, iPersonalHighScoreIndexOut[p], iMachineHighScoreIndexOut[p] );
 				}
 				break;
 			default:
@@ -1147,6 +1254,7 @@ void ScreenEvaluation::TweenOffScreen()
 		{
 			OFF_COMMAND( m_sprGradeFrame[p] );
 			OFF_COMMAND( m_Grades[p] );
+			OFF_COMMAND( m_Grades2[p] );
 			OFF_COMMAND( m_sprGrade[p] );
 		}
 	}
@@ -1193,6 +1301,16 @@ void ScreenEvaluation::TweenOffScreen()
 		}
 	}
 
+	// percent bar
+	if( SHOW_PERCENT_BAR )
+	{
+		FOREACH_EnabledPlayer( p ) 
+		{
+			OFF_COMMAND( m_sprPossibleBar[p][0] );
+			OFF_COMMAND( m_sprActualBar[p][0] );
+		}
+	}
+
 	// survived area
 	if( SHOW_SURVIVED_AREA )
 	{
@@ -1224,6 +1342,9 @@ void ScreenEvaluation::TweenOffScreen()
 		FOREACH_EnabledPlayer( p ) 
 			OFF_COMMAND( m_textJudgeNumbers[l][p] );
 	}
+	FOREACH_EnabledPlayer( p ) 
+		OFF_COMMAND( m_textMaxCombo2[p] );
+
 
 	// stats area
 	for( int l=0; l<NUM_STATS_LINES; l++ ) 
@@ -1385,6 +1506,9 @@ void ScreenEvaluation::HandleScreenMessage( const ScreenMessage SM )
 		break;
 	case SM_GoToNextScreen:
 	{
+		if( PREFSMAN->m_bArcadeEventMode && (m_Type == summary || m_Type == course))
+			SCREENMAN->SetNewScreen( "ScreenTitleMenu" );
+		else		
 		if( PREFSMAN->m_bEventMode )
 			SCREENMAN->SetNewScreen( NEXT_SCREEN );
 		else
@@ -1467,6 +1591,8 @@ void ScreenEvaluation::EndScreen()
 
 	FOREACH_PlayerNumber( p )
 		m_Grades[p].SettleImmediately();
+	FOREACH_PlayerNumber( p )
+		m_Grades2[p].SettleImmediately();
 
 	if( !PREFSMAN->m_bEventMode )
 	{

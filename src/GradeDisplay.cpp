@@ -5,14 +5,19 @@
 #include "PrefsManager.h"
 #include "ThemeManager.h"
 #include "RageTexture.h"
+#include "RandomNumber.h"
 
-
-const float SCROLL_TIME = 5.0f;
+const float SCROLL_TIME = 3.0f;
 const float QUICK_SCROLL_TIME = .25f;
 const int NUM_GRADE_FRAMES = 8;
 const float GRADE_FRAME_HEIGHT = 1/(float)NUM_GRADE_FRAMES;
 const float GRADES_TO_SCROLL = NUM_GRADE_FRAMES*4;
+const float SCROLL_UNIT = 0.03125f; //amount of scrolling for one grade difference
 
+int NUM_GRADE_FRAMES_VAR;
+float GRADE_FRAME_HEIGHT_VAR;
+int scrollkind = -1;
+const int numofscrollkinds = 4;
 
 GradeDisplay::GradeDisplay()
 {
@@ -27,9 +32,15 @@ bool GradeDisplay::Load( RageTextureID ID )
 	ID.bStretch = true;
 	Sprite::Load( ID );
 	Sprite::StopAnimating();
+	
+	if (Sprite::GetNumStates() == 7)
+		NUM_GRADE_FRAMES_VAR = 7;
+	else
+		NUM_GRADE_FRAMES_VAR = 8;
 
-	if( Sprite::GetNumStates() != 8 && Sprite::GetNumStates() != 16 )
-		RageException::Throw( "The grade graphic '%s' must have either 8 or 16 frames.", ID.filename.c_str() );
+	GRADE_FRAME_HEIGHT_VAR = 1/(float)NUM_GRADE_FRAMES_VAR;
+//	if( Sprite::GetNumStates() != 8 && Sprite::GetNumStates() != 16 )
+//		RageException::Throw( "The grade graphic '%s' must have either 8 or 16 frames.", ID.filename.c_str() );
 	return true;
 }
 
@@ -45,13 +56,50 @@ void GradeDisplay::Update( float fDeltaTime )
 		float fPercentIntoScrolling;
 		if( m_bDoScrolling == 1)
 		{
-			fPercentIntoScrolling = 1 - (m_fTimeLeftInScroll/SCROLL_TIME);
-			if( fPercentIntoScrolling < 0.75 )
-				fPercentIntoScrolling = (fPercentIntoScrolling/0.75f) * (1 + 1.0f/NUM_GRADE_FRAMES);
-			else if( fPercentIntoScrolling < 0.9 )
-				fPercentIntoScrolling = 1 + 1.0f/NUM_GRADE_FRAMES;
-			else
-				fPercentIntoScrolling = (1 + 1.0f/NUM_GRADE_FRAMES) - ((fPercentIntoScrolling-0.9f)/0.1f) * 1.0f/NUM_GRADE_FRAMES;
+			if (scrollkind == 0) {
+				//decelerate, settle
+				fPercentIntoScrolling = ((m_fTimeLeftInScroll * 1.6f) * (m_fTimeLeftInScroll * 1.6f));
+			} else if (scrollkind == 1) {
+				//decelerate, stop once in between
+				if (m_fTimeLeftInScroll >= 0.52f) {
+					fPercentIntoScrolling = 1.2f + (((m_fTimeLeftInScroll-0.52f) * 1.8f) * ((m_fTimeLeftInScroll-0.52f) * 1.8f));
+				} else if (m_fTimeLeftInScroll >= 0.16f) {
+					fPercentIntoScrolling = 1.2f;
+				} else {
+					fPercentIntoScrolling = m_fTimeLeftInScroll/0.16f * 1.2f;
+				}
+			} else if (scrollkind == 2) {
+				//decelerate, stop 2 times in between
+				if (m_fTimeLeftInScroll >= 0.68f) {
+					fPercentIntoScrolling = 2.25f + (((m_fTimeLeftInScroll-0.68f) * 1.6f) * ((m_fTimeLeftInScroll-0.68f) * 1.6f));
+				} else if (m_fTimeLeftInScroll >= 0.44f) {
+					fPercentIntoScrolling = 2.25f;
+				} else if (m_fTimeLeftInScroll >= 0.28f) {
+					fPercentIntoScrolling = 1.15f + (m_fTimeLeftInScroll-0.28f)/(0.44f-0.28f) * (2.25f-1.15f);
+				} else if (m_fTimeLeftInScroll >= 0.16f) {
+					fPercentIntoScrolling = 1.15f;
+				} else {
+					fPercentIntoScrolling = m_fTimeLeftInScroll/0.16f * 1.15f;
+				}
+			} else if (scrollkind == 3) {
+				//decelerate, stop 3 times in between
+				if (m_fTimeLeftInScroll >= 1.00f) {
+					fPercentIntoScrolling = 3.48f + (((m_fTimeLeftInScroll-1.00f) * 1.8f) * ((m_fTimeLeftInScroll-1.00f) * 1.8f));
+				} else if (m_fTimeLeftInScroll >= 0.68f) {
+					fPercentIntoScrolling = 3.48f; 
+				} else if (m_fTimeLeftInScroll >= 0.56f) {
+					fPercentIntoScrolling = 2.3f + (m_fTimeLeftInScroll-0.56f)/(0.68f-0.56f) * (3.48f-2.3f);
+				} else if (m_fTimeLeftInScroll >= 0.44f) {
+					fPercentIntoScrolling = 2.3f;
+				} else if (m_fTimeLeftInScroll >= 0.28f) {
+					fPercentIntoScrolling = 1.2f + (m_fTimeLeftInScroll-0.28f)/(0.44f-0.28f) * (2.3f-1.2f);
+				} else if (m_fTimeLeftInScroll >= 0.16f) {
+					fPercentIntoScrolling = 1.2f;
+				} else {
+					fPercentIntoScrolling = m_fTimeLeftInScroll/0.16f * 1.2f;
+				}
+			} else fPercentIntoScrolling = 0;
+			fPercentIntoScrolling = 1 + (fPercentIntoScrolling * SCROLL_UNIT);
 		} else {
 			fPercentIntoScrolling = 1 - (m_fTimeLeftInScroll/QUICK_SCROLL_TIME);
 		}
@@ -62,6 +110,11 @@ void GradeDisplay::Update( float fDeltaTime )
 		m_frectCurTexCoords.bottom = m_frectStartTexCoords.bottom*(1-fPercentIntoScrolling) + m_frectDestTexCoords.bottom*fPercentIntoScrolling;
 
 		this->SetCustomTextureRect( m_frectCurTexCoords );
+		if (m_fTimeLeftInScroll == 0.0f) 
+		{
+			m_bDoScrolling = 0;
+			scrollkind = -1;
+		}
 	}
 }
 
@@ -78,23 +131,42 @@ int GradeDisplay::GetFrameNo( PlayerNumber pn, Grade g )
 	{
 	default:
 		ASSERT(0);
+	case 7:		iNumCols=1;	break;
 	case 8:		iNumCols=1;	break;
 	case 16:	iNumCols=2;	break;
 	}
 
 	int iFrame;
-	switch( g )
+	if (NUM_GRADE_FRAMES_VAR == 7)
 	{
-	case GRADE_TIER_1:	iFrame = 0;	break;
-	case GRADE_TIER_2:	iFrame = 1;	break;
-	case GRADE_TIER_3:	iFrame = 2;	break;
-	case GRADE_TIER_4:	iFrame = 3;	break;
-	case GRADE_TIER_5:	iFrame = 4;	break;
-	case GRADE_TIER_6:	iFrame = 5;	break;
-	case GRADE_TIER_7:	iFrame = 6;	break;
-	case GRADE_FAILED:	iFrame = 7;	break;
-	default:			iFrame = 7;	break;
+		switch( g )
+		{
+		case GRADE_TIER_1:	iFrame = 0;	break;
+		case GRADE_TIER_2:	iFrame = 0;	break;
+		case GRADE_TIER_3:	iFrame = 3;	break;
+		case GRADE_TIER_4:	iFrame = 6;	break;
+		case GRADE_TIER_5:	iFrame = 1;	break;
+		case GRADE_TIER_6:	iFrame = 5;	break;
+		case GRADE_TIER_7:	iFrame = 2;	break;
+		case GRADE_FAILED:	iFrame = 4;	break;
+		default:		iFrame = 4;	break;
+		}
+
+	} else {
+		switch( g )
+		{
+		case GRADE_TIER_1:	iFrame = 0;	break;
+		case GRADE_TIER_2:	iFrame = 1;	break;
+		case GRADE_TIER_3:	iFrame = 2;	break;
+		case GRADE_TIER_4:	iFrame = 3;	break;
+		case GRADE_TIER_5:	iFrame = 4;	break;
+		case GRADE_TIER_6:	iFrame = 5;	break;
+		case GRADE_TIER_7:	iFrame = 6;	break;
+		case GRADE_FAILED:	iFrame = 7;	break;
+		default:		iFrame = 7;	break;
+		}
 	}
+
 	iFrame *= iNumCols;
 	if( iNumCols==2 )
 		iFrame += pn;
@@ -125,10 +197,13 @@ void GradeDisplay::Spin()
 
 	m_frectDestTexCoords = *m_pTexture->GetTextureCoordRect( iFrameNo );
 	m_frectStartTexCoords = m_frectDestTexCoords;
-	m_frectStartTexCoords.top += GRADES_TO_SCROLL * GRADE_FRAME_HEIGHT;
-	m_frectStartTexCoords.bottom += GRADES_TO_SCROLL * GRADE_FRAME_HEIGHT;
+	m_frectStartTexCoords.top += GRADES_TO_SCROLL * GRADE_FRAME_HEIGHT_VAR;
+	m_frectStartTexCoords.bottom += GRADES_TO_SCROLL * GRADE_FRAME_HEIGHT_VAR;
 
 	m_fTimeLeftInScroll = SCROLL_TIME;
+
+	if (scrollkind == -1) scrollkind = randomnumber(numofscrollkinds);
+
 
 	/* Set the initial position. */
 	Update(0);
@@ -136,11 +211,13 @@ void GradeDisplay::Spin()
 
 void GradeDisplay::SettleImmediately()
 {
+	scrollkind = -1;
 	m_fTimeLeftInScroll = 0;
 }
 
 void GradeDisplay::SettleQuickly()
 {
+	scrollkind = -1;
 	if(m_bDoScrolling != 1)
 		return;
 

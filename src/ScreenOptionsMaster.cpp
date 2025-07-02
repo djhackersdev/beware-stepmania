@@ -137,7 +137,7 @@ void ScreenOptionsMaster::SetStep( OptionRowData &row, OptionRowHandler &hand )
 				s = pSteps->GetDescription();
 			else
 				s = DifficultyToThemedString( pSteps->GetDifficulty() );
-			s += ssprintf( " (%d)", pSteps->GetMeter() );
+//			s += ssprintf( " (%d)", pSteps->GetMeter() );
 
 			row.choices.push_back( s );
 			ModeChoice mc;
@@ -194,10 +194,15 @@ void ScreenOptionsMaster::SetCharacter( OptionRowData &row, OptionRowHandler &ha
 	}
 }
 
+bool b_PrevArcadeEvent;
+
 ScreenOptionsMaster::ScreenOptionsMaster( CString sClassName ):
 	ScreenOptions( sClassName )
 {
 	LOG->Trace("ScreenOptionsMaster::ScreenOptionsMaster(%s)", m_sName.c_str() );
+
+	//beware: entering options screen
+	b_PrevArcadeEvent = PREFSMAN->m_bArcadeEventMode;
 
 	/* If this file doesn't exist, leave the music alone (eg. ScreenPlayerOptions music sample
 	 * left over from ScreenSelectMusic).  If you really want to play no music, add a redir
@@ -564,8 +569,38 @@ void ScreenOptionsMaster::ExportOptions()
 	CHECKPOINT;
 }
 
+void onexitoptionsscreen()
+{
+	SongOptions so;
+	CStringArray as;
+	if (PREFSMAN->m_bArcadeEventMode && !b_PrevArcadeEvent)
+	{
+		so.FromString( PREFSMAN->m_sDefaultModifiers );
+		so.m_FailType = SongOptions::FAIL_OFF;
+		PREFSMAN->m_bEventMode = false;
+		PREFSMAN->m_bAllowExtraStage = false;
+		PREFSMAN->m_bMenuTimer = false;
+		PREFSMAN->m_bArcadeEventMode = true;
+		as.push_back( so.GetString() );
+		PREFSMAN->m_sDefaultModifiers = join(", ",as);
+	}
+	else if (!PREFSMAN->m_bArcadeEventMode && b_PrevArcadeEvent)
+	{
+		so.FromString( PREFSMAN->m_sDefaultModifiers );
+		so.m_FailType = SongOptions::FAIL_IMMEDIATE;
+		PREFSMAN->m_bEventMode = false;
+		PREFSMAN->m_bAllowExtraStage = true;
+		PREFSMAN->m_bMenuTimer = true;
+		PREFSMAN->m_bArcadeEventMode = false;
+		as.push_back( so.GetString() );
+		PREFSMAN->m_sDefaultModifiers = join(", ",as);
+	}
+	b_PrevArcadeEvent = PREFSMAN->m_bArcadeEventMode;
+}
+
 void ScreenOptionsMaster::GoToNextState()
 {
+	onexitoptionsscreen();
 	if( GAMESTATE->m_bEditing )
 		SCREENMAN->PopTopScreen();
 	else if( m_NextScreen != "" )
@@ -574,6 +609,7 @@ void ScreenOptionsMaster::GoToNextState()
 
 void ScreenOptionsMaster::GoToPrevState()
 {
+	onexitoptionsscreen();
 	/* XXX: A better way to handle this would be to check if we're a pushed screen. */
 	if( GAMESTATE->m_bEditing )
 		SCREENMAN->PopTopScreen();

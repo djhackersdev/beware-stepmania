@@ -174,7 +174,7 @@ void Course::LoadFromCRSFile( CString sPath )
 					LOG->Warn( "Course file '%s' contains a random_within_group entry '%s' that is invalid. "
 								"Song should be in the format '<group>/*'.",
 								m_sPath.c_str(), sSong.c_str());
-				if( !SONGMAN->DoesGroupExist(new_entry.group_name) )
+				if( (!SONGMAN->DoesGroupExist(new_entry.group_name)) && (new_entry.group_name.Find("$") != 0) )
 				{
 					/* XXX: We need a place to put "user warnings".  This is too loud for info.txt--
 				     * it obscures important warnings--and regular users never look there, anyway. */
@@ -725,6 +725,11 @@ bool Course::GetTrailUnsorted( StepsType st, CourseDifficulty cd, Trail &trail )
 		int low_meter = e.low_meter;
 		int high_meter = e.high_meter;
 
+		int dancemania_issong;
+		CString dancemania_searchfor;
+		int dancemania_not;
+		CString dancemania_cdtitle;
+		
 		switch( e.type )
 		{
 		case COURSE_ENTRY_FIXED:
@@ -760,7 +765,28 @@ bool Course::GetTrailUnsorted( StepsType st, CourseDifficulty cd, Trail &trail )
 
 					if(e.type == COURSE_ENTRY_RANDOM_WITHIN_GROUP &&
 					   pSong->m_sGroupName.CompareNoCase(e.group_name))
-					   continue; /* wrong group */
+					{
+						//random dancemania / random bemani
+						//this finds a song that has or lacks a string in the cdtitle
+						dancemania_cdtitle = pSong->m_sCDTitleFile;
+						dancemania_cdtitle.MakeUpper();
+
+						//strip leading $
+						dancemania_searchfor = e.group_name.Right(e.group_name.GetLength() - 1);
+						dancemania_not = 0;
+
+						if (dancemania_searchfor.Find("!") >= 0)
+						{
+							dancemania_not = 1;
+							dancemania_searchfor = dancemania_searchfor.Right(dancemania_searchfor.GetLength() - 1);
+						}
+						
+						//problem: match on "DANCE MANIA.PNG" and "DANCE MANIA 2.PNG" but not on "DANCE MANIAX.PNG"
+						dancemania_issong = ((dancemania_cdtitle.Find(dancemania_searchfor + ".") >= 0) || (dancemania_cdtitle.Find(dancemania_searchfor + " ") >= 0));
+						
+						if (!(dancemania_issong ^ dancemania_not)) continue;
+					
+					}
 
 					if( e.difficulty == DIFFICULTY_INVALID )
 						pSteps = pSong->GetStepsByMeter( st, low_meter, high_meter );
@@ -1106,10 +1132,10 @@ bool Course::IsRanking() const
 	split(THEME->GetMetric("ScreenRanking", "CoursesToShow"), ",", rankingsongs);
 
 	for(unsigned i=0; i < rankingsongs.size(); i++)
-		if (rankingsongs[i].CompareNoCase(m_sPath))
-			return true;
-
-	return false;
+		if (!rankingsongs[i].CompareNoCase(m_sPath))
+			return false;
+	//if the song is *not* in the list, it must return true. screenranking expects this.
+	return true;
 }
 
 void Course::GetAllCachedTrails( vector<Trail *> &out )

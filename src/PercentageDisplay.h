@@ -20,6 +20,8 @@ private:
 	StageStats *m_pSource;
 	bool m_bAutoRefresh;
 	int m_Last;
+	int m_currentpoints;
+	float m_timecounter;
 	BitmapText	m_textPercent;
 	BitmapText	m_textPercentRemainder;
 };

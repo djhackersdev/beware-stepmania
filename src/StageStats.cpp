@@ -194,6 +194,9 @@ Grade StageStats::GetGrade( PlayerNumber pn ) const
 	Grade grade = GRADE_FAILED;
 
 	float fPercent = (Possible == 0) ? 0 : Actual / Possible;
+	
+	if (GAMESTATE->m_CurrentPlayerOptions[pn].m_bTransforms[PlayerOptions::TRANSFORM_LITTLE])
+		fPercent = fPercent / 2;
 
 	FOREACH_Grade(g)
 	{

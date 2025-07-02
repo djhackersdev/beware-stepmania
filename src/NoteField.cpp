@@ -579,8 +579,13 @@ void NoteField::DrawPrimitives()
 		NextDisplay = CurDisplay; ++NextDisplay;
 
 		// draw notes from furthest to closest
-		for( i=iLastIndexToDraw; i>=iFirstIndexToDraw; --i )	//	 for each row
+		for( int ii=(iLastIndexToDraw-iFirstIndexToDraw); ii>=0; --ii )	//	 for each row
 		{	
+			if (c != 2)
+				i = ii+iFirstIndexToDraw;
+			else
+				i = (iLastIndexToDraw-iFirstIndexToDraw)-ii+iFirstIndexToDraw;
+
 			TapNote tn = GetTapNote(c, i);
 			if( tn.type == TapNote::empty )	// no note here
 				continue;	// skip

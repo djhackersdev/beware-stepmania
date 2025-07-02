@@ -36,6 +36,8 @@ struct NoteMetricCache_t
 	bool m_bAnimationIsVivid[NUM_PARTS];
 	bool m_bAnimationIsNoteColor[NUM_PARTS];
 
+	bool m_ddrvivid;
+
 	bool m_bHoldHeadIsAboveWavyParts;
 	bool m_bHoldTailIsAboveWavyParts;
 	int m_iStartDrawingHoldBodyOffsetFromHead;
@@ -79,6 +81,8 @@ void NoteMetricCache_t::Load(CString skin, const CString &name)
 	m_bAnimationIsNoteColor[PART_HOLD_BODY] =	NOTESKIN->GetMetricB(skin,name,"HoldBodyAnimationIsNoteColor");
 	m_bAnimationIsNoteColor[PART_HOLD_BOTTOM_CAP] =	NOTESKIN->GetMetricB(skin,name,"HoldBottomCapAnimationIsNoteColor");
 	m_bAnimationIsNoteColor[PART_HOLD_TAIL] =	NOTESKIN->GetMetricB(skin,name,"HoldTailAnimationIsNoteColor");
+
+	m_ddrvivid =					NOTESKIN->GetMetricB(skin,name,"DDRVivid");
 
 	m_bHoldHeadIsAboveWavyParts =				NOTESKIN->GetMetricB(skin,name,"HoldHeadIsAboveWavyParts");
 	m_bHoldTailIsAboveWavyParts =				NOTESKIN->GetMetricB(skin,name,"HoldTailIsAboveWavyParts");
@@ -361,16 +365,24 @@ void NoteDisplay::SetActiveFrame( float fNoteBeat, Actor &actorToSet, float fAni
 
 	float fSongBeat = GAMESTATE->m_fSongBeat;
 	float fPercentIntoAnimation = fmodf(fSongBeat,fAnimationLengthInBeats) / fAnimationLengthInBeats;
-	float fNoteBeatFraction = fmodf( fNoteBeat, 1.0f );
+	float fNoteBeatFraction = fmodf( fNoteBeat + 0.03125, 1.0f );
 
+	float fFraction = 0.0;
+	float fInterval = 0.0;
+	
 	if( bVivid )
-	{
+	{	
 		// changed to deal with the minor complaint that the color cycling is
 		// one tick off in general
-		const float fFraction = fNoteBeatFraction - 0.25f/fAnimationLengthInBeats;
-		const float fInterval = 1.f / fAnimationLengthInBeats;
-		fPercentIntoAnimation += froundf(fFraction,fInterval);
+		fFraction = fNoteBeatFraction + 0.125f/fAnimationLengthInBeats;
+		fInterval = 1.f / fAnimationLengthInBeats;
+		
 	}
+	//working around the bug that notes don't go to the next frame at the same time,
+	//and that they don't go to the next frame on exactly the beat (but slightly earlier) -beware
+	fPercentIntoAnimation = froundf(fPercentIntoAnimation - (0.03125f / fAnimationLengthInBeats), 0.0625f / fAnimationLengthInBeats);
+	fPercentIntoAnimation += froundf(fFraction,fInterval)+(0.03125f/fAnimationLengthInBeats);
+	
 
 	// just in case somehow we're majorly negative with the subtraction
 	wrap( fPercentIntoAnimation, 1.f );
@@ -383,7 +395,14 @@ Actor * NoteDisplay::GetTapNoteActor( float fNoteBeat )
 {
 	NoteType nt = NoteType(0);
 	if( cache->m_bAnimationIsNoteColor[PART_TAP] )
-		nt = BeatToNoteType( fNoteBeat );
+	{
+		if (cache->m_ddrvivid) {
+			nt = (enum NoteType)(int) ((fNoteBeat+0.249-int(fNoteBeat+0.249))*4);
+			switch((int)nt) {case 1:nt=NOTE_TYPE_16TH; break;case 2:nt=NOTE_TYPE_8TH;break;case 3:nt=NOTE_TYPE_12TH;}
+		} else
+			nt = BeatToNoteType( fNoteBeat );
+	}
+
 //  NOTE_TYPE_INVALID is 192nds at this point.
 	if( nt == NOTE_TYPE_INVALID )
 		nt = NOTE_TYPE_192ND;
@@ -906,9 +925,9 @@ void NoteDisplay::DrawHold( const HoldNote& hn, bool bIsBeingHeld, bool bIsActiv
 	/* The body and caps should have no overlap, so their order doesn't matter.
 	 * Draw the head last, so it appears on top. */
 	if( !cache->m_bHoldHeadIsAboveWavyParts )
-		DrawHoldHead( hn, bIsBeingHeld, bFlipHeadAndTail ? fYTail : fYHead, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldHead( hn, bIsActive, bFlipHeadAndTail ? fYTail : fYHead, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 	if( !cache->m_bHoldTailIsAboveWavyParts )
-		DrawHoldTail( hn, bIsBeingHeld, bFlipHeadAndTail ? fYHead : fYTail, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldTail( hn, bIsActive, bFlipHeadAndTail ? fYHead : fYTail, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 
 	if( bDrawGlowOnly )
 		DISPLAY->SetTextureModeGlow();
@@ -918,16 +937,16 @@ void NoteDisplay::DrawHold( const HoldNote& hn, bool bIsBeingHeld, bool bIsActiv
 	DISPLAY->SetZWrite( WavyPartsNeedZBuffer );
 	
 	if( !bFlipHeadAndTail )
-		DrawHoldBottomCap( hn, bIsBeingHeld, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
-	DrawHoldBody( hn, bIsBeingHeld, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldBottomCap( hn, bIsActive, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+	DrawHoldBody( hn, bIsActive, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 	if( bFlipHeadAndTail )
-		DrawHoldTopCap( hn, bIsBeingHeld, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldTopCap( hn, bIsActive, fYHead, fYTail, fYStep, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 
 	/* These set the texture mode themselves. */
 	if( cache->m_bHoldTailIsAboveWavyParts )
-		DrawHoldTail( hn, bIsBeingHeld, bFlipHeadAndTail ? fYHead : fYTail, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldTail( hn, bIsActive, bFlipHeadAndTail ? fYHead : fYTail, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 	if( cache->m_bHoldHeadIsAboveWavyParts )
-		DrawHoldHead( hn, bIsBeingHeld, bFlipHeadAndTail ? fYTail : fYHead, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
+		DrawHoldHead( hn, bIsActive, bFlipHeadAndTail ? fYTail : fYHead, iCol, fPercentFadeToFail, fColorScale, bDrawGlowOnly );
 
 	// now, draw the glow pass
 	if( !bDrawGlowOnly )

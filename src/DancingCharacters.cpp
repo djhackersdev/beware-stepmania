@@ -57,6 +57,7 @@ DancingCharacters::DancingCharacters()
 			continue;
 
 		Character* pChar = GAMESTATE->m_pCurCharacters[p];
+		if ( PREFSMAN->m_ShowDancingCharacters == PrefsManager::CO_OFF ) pChar = NULL;
 		if( !pChar )
 			continue;
 

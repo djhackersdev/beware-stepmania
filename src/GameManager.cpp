@@ -48,6 +48,9 @@ const int TECHNO_VERSUS_COL_SPACING = 33;
 const int PNM5_COL_SPACING = 32; 
 const int PNM9_COL_SPACING = 32; 
 
+const int DANCE_PL1_CENTERX = 144;
+const int DANCE_PL2_CENTERX = 496;
+
 struct {
 	const char *name;
 	int NumTracks;
@@ -1214,7 +1217,7 @@ Style g_Styles[] =
 		"single",								// m_szName
 		STEPS_TYPE_DANCE_SINGLE,				// m_StepsType
 		Style::ONE_PLAYER_ONE_CREDIT,		// m_StyleType
-		{ 160, 480 },							// m_iCenterX
+		{ DANCE_PL1_CENTERX, DANCE_PL2_CENTERX },							// m_iCenterX
 		4,										// m_iColsPerPlayer
 		{	// m_ColumnInfo[NUM_PLAYERS][MAX_COLS_PER_PLAYER];
 			{	// PLAYER_1
@@ -1245,7 +1248,7 @@ Style g_Styles[] =
 		"versus",								// m_szName
 		STEPS_TYPE_DANCE_SINGLE,				// m_StepsType
 		Style::TWO_PLAYERS_TWO_CREDITS,		// m_StyleType
-		{ 160, 480 },							// m_iCenterX
+		{ DANCE_PL1_CENTERX, DANCE_PL2_CENTERX },							// m_iCenterX
 		4,										// m_iColsPerPlayer
 		{	// m_ColumnInfo[NUM_PLAYERS][MAX_COLS_PER_PLAYER];
 			{	// PLAYER_1
@@ -1315,7 +1318,7 @@ Style g_Styles[] =
 		"couple",							// m_szName
 		STEPS_TYPE_DANCE_COUPLE,	// m_StepsType
 		Style::TWO_PLAYERS_TWO_CREDITS,	// m_StyleType
-		{ 160, 480 },						// m_iCenterX
+		{ DANCE_PL1_CENTERX, DANCE_PL2_CENTERX },						// m_iCenterX
 		4,									// m_iColsPerPlayer
 		{	// m_ColumnInfo[NUM_PLAYERS][MAX_COLS_PER_PLAYER];
 			{	// PLAYER_1
@@ -1415,7 +1418,7 @@ Style g_Styles[] =
 		"dance-solo-versus",				// m_szName
  		STEPS_TYPE_DANCE_SOLO,				// m_StepsType
 		Style::ONE_PLAYER_ONE_CREDIT,	// m_StyleType
-		{ 160, 480 },						// m_iCenterX
+		{ DANCE_PL1_CENTERX, DANCE_PL2_CENTERX },						// m_iCenterX
 		6,									// m_iColsPerPlayer
 		{	// m_ColumnInfo[NUM_PLAYERS][MAX_COLS_PER_PLAYER];
 			{	// PLAYER_1

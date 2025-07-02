@@ -65,8 +65,9 @@ void ReceptorArrow::Update( float fDeltaTime )
 
 void ReceptorArrow::DrawPrimitives()
 {
-	m_pReceptorGo->SetHidden( !GAMESTATE->m_bPastHereWeGo );
-	m_pReceptorWaiting->SetHidden( GAMESTATE->m_bPastHereWeGo );
+	bool insong = (GAMESTATE->m_fSongBeat >= 0);
+	m_pReceptorGo->SetHidden( !insong );
+	m_pReceptorWaiting->SetHidden( insong );
 	m_pPressBlock->SetHidden( !m_bIsPressed );
 	m_bIsPressed = false;	// it may get turned back on next update
 

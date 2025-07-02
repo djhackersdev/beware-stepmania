@@ -9,7 +9,10 @@
 #include "ScreenSongOptions.h"
 #include "PrefsManager.h"
 #include "CodeDetector.h"
-
+#include "DifficultyIcon.h"
+#include "song.h"
+#include "Style.h"
+#include "Steps.h"
 
 #define PREV_SCREEN		THEME->GetMetric ("ScreenPlayerOptions","PrevScreen")
 #define NEXT_SCREEN		THEME->GetMetric ("ScreenPlayerOptions","NextScreen")
@@ -48,6 +51,13 @@ ScreenPlayerOptions::ScreenPlayerOptions( CString sClassName ) :
 		m_sprCancelAll[pn].LoadAndSetName( "ScreenPlayerOptions", ssprintf("CancelAllP%d",pn+1) );
 		SET_XY_AND_ON_COMMAND( m_sprCancelAll[pn] );
 		this->AddChild( m_sprCancelAll[pn] );
+
+		if (GAMESTATE->m_pCurSong) {
+			m_DifficultyIcon[pn].SetName( ssprintf("DifficultyIconP%d",pn+1) );
+			m_DifficultyIcon[pn].Load( THEME->GetPathG(m_sName,ssprintf("difficulty icons 1x%d",NUM_DIFFICULTIES)) );
+			SET_XY_AND_ON_COMMAND( m_DifficultyIcon[pn] );
+			m_framePage.AddChild( &m_DifficultyIcon[pn] );
+		}
 	}
 
 	UpdateDisqualified();
@@ -83,6 +93,43 @@ void ScreenPlayerOptions::Update( float fDelta )
 	ScreenOptionsMaster::Update( fDelta );
 	if( m_bAskOptionsMessage )
 		m_sprOptionsMessage.Update( fDelta );
+
+	if (GAMESTATE->m_pCurSong) {
+		//update difficulty icon
+		//read option setting. for some reason it was sometimes returning 0x3f800000, a bad value.
+		if ((m_difficultyrownum <= 0) || (m_difficultyrownum >= m_Rows.size()))
+			m_difficultyrownum = THEME->GetMetricI ("ScreenPlayerOptions","DifficultyIconRow")-1;
+		if (!vSteps.size())
+		{
+			GAMESTATE->m_pCurSong->GetSteps( vSteps, GAMESTATE->GetCurrentStyle()->m_StepsType );
+			//i found a song where the steps are not sorted by difficulty, so sort them
+			for (int i=0; i < vSteps.size(); i++)
+			for (int j=0; j < vSteps.size(); j++)
+			{
+				if (vSteps[i]->GetDifficulty() < vSteps[j]->GetDifficulty())
+				{
+					Steps* steps = vSteps[i];
+					vSteps[i] = vSteps[j];
+					vSteps[j] = steps;
+				}
+			}
+		}
+		Row *row = (m_Rows.size() > m_difficultyrownum) ? m_Rows[m_difficultyrownum] : NULL;
+		if (row) {
+			FOREACH_HumanPlayer( p )
+			{
+				// selection
+				int iSelection = -1;
+				for( unsigned j=0; j<row->m_vbSelected[p].size(); j++ )
+				{
+					if( row->m_vbSelected[p][j] )
+						iSelection = j;
+				}
+				m_DifficultyIcon[p].SetFromSteps( p, vSteps[iSelection]);
+			}
+		}
+
+	}
 }
 
 void ScreenPlayerOptions::DrawPrimitives()

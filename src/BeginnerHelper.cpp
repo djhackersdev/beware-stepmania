@@ -27,6 +27,10 @@
 #define ST_JUMPLR	(ST_LEFT | ST_RIGHT)
 #define ST_JUMPUD	(ST_UP | ST_DOWN)
 
+#define ANIMSPEED	1.0f
+#define RESTANIMSPEED	0.5f
+#define BEATSAHEAD	0.6f
+
 enum Animation
 {
 	ANIM_DANCE_PAD,
@@ -201,8 +205,8 @@ bool BeginnerHelper::Initialize( int iDancePadType )
 		m_pDancer[pl]->LoadMilkshapeAsciiBones("Step-RIGHT", 	GetAnimPath(ANIM_RIGHT));
 		m_pDancer[pl]->LoadMilkshapeAsciiBones("Step-JUMPLR", 	GetAnimPath(ANIM_JUMPLR));
 		m_pDancer[pl]->LoadMilkshapeAsciiBones("rest",			Character->GetRestAnimationPath());
-		m_pDancer[pl]->SetDefaultAnimation("rest");
-		m_pDancer[pl]->PlayAnimation("rest");
+		m_pDancer[pl]->SetDefaultAnimation("rest", RESTANIMSPEED);
+		m_pDancer[pl]->PlayAnimation("rest", RESTANIMSPEED);
 		m_pDancer[pl]->SetRotationX(PLAYER_ANGLE);
 		m_pDancer[pl]->SetX(HELPER_X+PLAYER_X(pl));
 		m_pDancer[pl]->SetY(HELPER_Y+10);
@@ -280,30 +284,30 @@ void BeginnerHelper::Step( PlayerNumber pn, int CSTEP )
 	{
 		case ST_LEFT:
 			ShowStepCircle(pn, ST_LEFT);
-			m_pDancer[pn]->PlayAnimation("Step-LEFT", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-LEFT", ANIMSPEED);
 			break;
 		case ST_RIGHT:
 			ShowStepCircle(pn, ST_RIGHT);
-			m_pDancer[pn]->PlayAnimation("Step-RIGHT", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-RIGHT", ANIMSPEED);
 			break;
 		case ST_UP:
 			ShowStepCircle(pn, ST_UP);
-			m_pDancer[pn]->PlayAnimation("Step-UP", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-UP", ANIMSPEED);
 			break;
 		case ST_DOWN:
 			ShowStepCircle(pn, ST_DOWN);
-			m_pDancer[pn]->PlayAnimation("Step-DOWN", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-DOWN", ANIMSPEED);
 			break;
 		case ST_JUMPLR:
 			ShowStepCircle(pn, ST_LEFT);
 			ShowStepCircle(pn, ST_RIGHT);
-			m_pDancer[pn]->PlayAnimation("Step-JUMPLR", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-JUMPLR", ANIMSPEED);
 			break;
 		case ST_JUMPUD:
 			ShowStepCircle(pn, ST_UP);
 			ShowStepCircle(pn, ST_DOWN);
 			m_pDancer[pn]->StopTweening();
-			m_pDancer[pn]->PlayAnimation("Step-JUMPLR", 1.5f);
+			m_pDancer[pn]->PlayAnimation("Step-JUMPLR", ANIMSPEED);
 			m_pDancer[pn]->BeginTweening((GAMESTATE->m_fCurBPS /8), TWEEN_LINEAR);
 			m_pDancer[pn]->SetRotationY(90);
 			m_pDancer[pn]->BeginTweening((1/(GAMESTATE->m_fCurBPS * 2))); //sleep between jump-frames
@@ -326,7 +330,7 @@ void BeginnerHelper::Update( float fDeltaTime )
 		return;
 
 	// the row we want to check on this update
-	int iCurRow = BeatToNoteRowNotRounded(GAMESTATE->m_fSongBeat + 0.4f);
+	int iCurRow = BeatToNoteRowNotRounded(GAMESTATE->m_fSongBeat + BEATSAHEAD);
 	FOREACH_EnabledPlayer( pn )
 	{
 		for(int iRow=m_iLastRowChecked; iRow<iCurRow; iRow++)

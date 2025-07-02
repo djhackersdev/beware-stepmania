@@ -29,7 +29,7 @@ struct OptionColumnEntry
 
 const OptionColumnEntry g_OptionColumnEntries[] =
 {
-	{"Boost",		0},
+	{"Boost",		1},
 	{"Brake",		0},
 	{"Wave",		0},
 	{"Expand",		0},
@@ -50,7 +50,7 @@ const OptionColumnEntry g_OptionColumnEntries[] =
 	{"Shuffle",		3},
 	{"SuperShuffle",3},
 	{"Little",		4},
-	{"NoHolds",		4},
+	{"NoHolds",		6},
 	{"Dark",		4},
 	{"Blind",		4},
 	{"Reverse",		5},
@@ -79,7 +79,7 @@ int OptionToPreferredColumn( CString sOptionText )
 
 	/* This warns about C1234 and noteskins. */
 //	LOG->Warn("Unknown option: '%s'", sOptionText.c_str() );
-	return 0;
+	return 4; //make noteskins appear in column 4
 }
 
 void OptionIconRow::Load( PlayerNumber pn )

@@ -12,7 +12,7 @@
 const int channels = 2;
 const int bytes_per_frame = channels*2;		/* 16-bit */
 const int samplerate = 44100;
-const int buffersize_frames = 1024*8;	/* in frames */
+const int buffersize_frames = 1024*2;	/* in frames */
 const int buffersize = buffersize_frames * bytes_per_frame; /* in bytes */
 
 const int num_chunks = 8;

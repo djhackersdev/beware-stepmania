@@ -49,7 +49,7 @@ public:
 	void ApplyWaitingTransforms();
 
 	static float GetMaxStepDistanceSeconds();
-
+	LifeMeter*		m_pLifeMeter;
 protected:
 	void UpdateTapNotesMissedOlderThan( float fMissIfOlderThanThisBeat );
 	void OnRowCompletelyJudged( int iStepIndex );
@@ -71,7 +71,7 @@ protected:
 	ArrowBackdrop	m_ArrowBackdrop;
 	NoteField*		m_pNoteField;
 
-	HoldJudgment	m_HoldJudgment[MAX_NOTE_TRACKS];
+	HoldJudgment	m_HoldJudgment[MAX_NOTE_TRACKS+1];
 
 	Judgment		m_Judgment;
 	ProTimingDisplay m_ProTimingDisplay;
@@ -81,7 +81,6 @@ protected:
 	AttackDisplay	m_AttackDisplay;
 
 	int m_iDCState;
-	LifeMeter*		m_pLifeMeter;
 	CombinedLifeMeter*		m_pCombinedLifeMeter;
 	ScoreDisplay*	m_pScoreDisplay;
 	ScoreDisplay*	m_pSecondaryScoreDisplay;
@@ -95,6 +94,8 @@ protected:
 	RageSound		m_soundMine;
 	RageSound		m_soundAttackLaunch;
 	RageSound		m_soundAttackEnding;
+
+	int			m_marvelousghost;
 };
 
 class Player : public PlayerMinus

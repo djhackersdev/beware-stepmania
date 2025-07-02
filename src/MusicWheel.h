@@ -70,7 +70,9 @@ public:
 	void RebuildMusicWheelItems();
 
 	Song *GetPreferredSelectionForRandomOrPortal();
-
+	float GetPositionOffsetFromSelection() { return m_fPositionOffsetFromSelection; }
+	WheelItemData* GetItemNearSelection(int offset)
+		{int i=m_iSelection+offset; wrap(i,m_CurWheelItemData.size()); return m_CurWheelItemData[i]; }
 protected:
 	void GetSongList(vector<Song*> &arraySongs, SortOrder so, CString sPreferredGroup );
 	void BuildWheelItemDatas( vector<WheelItemData> &arrayWheelItems, SortOrder so );

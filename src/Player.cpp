@@ -84,7 +84,7 @@ PlayerMinus::PlayerMinus()
 	this->AddChild( &m_ProTimingDisplay );
 	this->AddChild( &m_Combo );
 	this->AddChild( &m_AttackDisplay );
-	for( int c=0; c<MAX_NOTE_TRACKS; c++ )
+	for( int c=0; c<MAX_NOTE_TRACKS+1; c++ )
 		this->AddChild( &m_HoldJudgment[c] );
 
 
@@ -206,7 +206,7 @@ void PlayerMinus::Load( PlayerNumber pn, const NoteData* pNoteData, LifeMeter* p
 	m_AttackDisplay.Command( g_NoteFieldMode[pn].m_AttackDisplayCmd );
 
 	int c;
-	for( c=0; c<pStyle->m_iColsPerPlayer; c++ )
+	for( c=0; c<pStyle->m_iColsPerPlayer+1; c++ )
 	{
 		NoteFieldMode &mode = g_NoteFieldMode[pn];
 		m_HoldJudgment[c].Command( mode.m_HoldJudgmentCmd[c] );
@@ -279,6 +279,10 @@ void PlayerMinus::Update( float fDeltaTime )
 			m_HoldJudgment[c].SetZ( fZ );
 		}
 	}
+	int numcols=GAMESTATE->GetCurrentStyle()->m_iColsPerPlayer;
+	m_HoldJudgment[numcols].SetX( (m_HoldJudgment[0].GetX()+m_HoldJudgment[numcols-1].GetX()) / 2 );
+	m_HoldJudgment[numcols].SetY( m_HoldJudgment[0].GetY() );
+	m_HoldJudgment[numcols].SetZ( m_HoldJudgment[0].GetZ() );
 
 	float fPercentReverse = GAMESTATE->m_CurrentPlayerOptions[m_PlayerNumber].GetReversePercentForColumn(0);
 	float fGrayYPos = SCALE( fPercentReverse, 0.f, 1.f, GRAY_ARROWS_Y_STANDARD, GRAY_ARROWS_Y_REVERSE );
@@ -389,7 +393,8 @@ void PlayerMinus::Update( float fDeltaTime )
 
 		/* check for NG.  If the head was missed completely, don't count
 		 * an NG. */
-		if( bSteppedOnTapNote && fLife == 0 )	// the player has not pressed the button for a long time!
+		//we must count a NG or the score counter gets behind (too low score). but don't show the NG.
+		if( fLife == 0 )	// the player has not pressed the button for a long time!
 			hns = HNS_NG;
 
 		// check for OK
@@ -402,9 +407,49 @@ void PlayerMinus::Update( float fDeltaTime )
 
 		if( hns != HNS_NONE )
 		{
+			//find if this hold note is part of a jump
+			HoldNote* otherhn = NULL;
+			for( int i=0; i < GetNumHoldNotes(); i++ )		// for each HoldNote
+			{
+				HoldNote &hn2 = GetHoldNote(i);
+				if ((hn2.iStartRow == hn.iStartRow) && (&hn2 != &hn))
+				{
+					otherhn = &hn2;
+					break;
+				}
+			}
+
 			/* this note has been judged */
-			HandleHoldScore( hns, tns );
-			m_HoldJudgment[hn.iTrack].SetHoldJudgment( hns );
+			if (otherhn)
+			{
+				if (hns == HNS_OK)
+				{
+					if (GetHoldNoteScore(*otherhn) == HNS_OK)
+					{
+						HandleHoldScore( hns, tns );
+						m_HoldJudgment[GAMESTATE->GetCurrentStyle()->m_iColsPerPlayer].SetHoldJudgment( hns );
+					}
+				}
+				else if (hns == HNS_NG)
+				{
+					if (GetHoldNoteScore(*otherhn) != HNS_NG)
+					{
+						HandleHoldScore( hns, tns );
+						if (bSteppedOnTapNote)
+							m_HoldJudgment[GAMESTATE->GetCurrentStyle()->m_iColsPerPlayer].SetHoldJudgment( hns );
+						//the other note must NG (become dark) as well, and not be counted
+						SetHoldNoteScore(*otherhn, hns);
+						m_pNoteField->SetHoldNoteLife(*otherhn, 0.0);
+
+					}
+				}
+			}
+			else
+			{
+				HandleHoldScore( hns, tns );
+				if (bSteppedOnTapNote || (hns == HNS_OK))
+				m_HoldJudgment[hn.iTrack].SetHoldJudgment( hns );
+			}
 
 			int ms_error = (hns == HNS_OK)? 0:MAX_PRO_TIMING_ERROR;
 
@@ -579,6 +624,7 @@ void PlayerMinus::DrawHoldJudgments()
 
 		g_NoteFieldMode[m_PlayerNumber].EndDrawTrack(c);
 	}
+	m_HoldJudgment[GetNumTracks()].Draw();
 }
 
 /* It's OK for this function to search a little more than was requested. */
@@ -835,6 +881,8 @@ void PlayerMinus::Step( int col, RageTimer tm )
 				m_ProTimingDisplay.SetJudgment( ms_error, score );
 		}
 
+		m_marvelousghost = (score==TNS_MARVELOUS);
+
 		if( score==TNS_MARVELOUS  &&  !GAMESTATE->ShowMarvelous())
 			score = TNS_PERFECT;
 
@@ -960,13 +1008,15 @@ void PlayerMinus::OnRowCompletelyJudged( int iIndexThatWasSteppedOn )
 			case TNS_MARVELOUS:
 				{
 					bool bBright = g_CurStageStats.iCurCombo[m_PlayerNumber]>(int)BRIGHT_GHOST_COMBO_THRESHOLD;
-					m_pNoteField->DidTapNote( c, score, bBright );
+						if (m_marvelousghost) m_pNoteField->DidTapNote( c, TNS_MARVELOUS, bBright );
+					else
+						m_pNoteField->DidTapNote( c, score, bBright );
 				}
 				break;
 			}
 		}
 	}
-		
+	m_marvelousghost = 0;	
 	HandleTapRowScore( iIndexThatWasSteppedOn );	// update score
 
 	m_Judgment.SetJudgment( score );
@@ -1176,7 +1226,10 @@ void PlayerMinus::HandleTapRowScore( unsigned row )
 
 	m_Combo.SetCombo( g_CurStageStats.iCurCombo[m_PlayerNumber], g_CurStageStats.iCurMissCombo[m_PlayerNumber] );
 
-#define CROSSED( x ) (iOldCombo<x && iCurCombo>=x)
+	int oldMaxCombo = g_CurStageStats.iMaxCombo[m_PlayerNumber];
+	int newMaxCombo = max(g_CurStageStats.iMaxCombo[m_PlayerNumber], iCurCombo);
+
+#define CROSSED( x ) (oldMaxCombo<x && newMaxCombo>=x)
 	if ( CROSSED(100) )	
 		SCREENMAN->PostMessageToTopScreen( SM_100Combo, 0 );
 	else if( CROSSED(200) )	

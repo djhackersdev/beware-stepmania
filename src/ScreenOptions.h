@@ -101,6 +101,7 @@ protected:
 		~Row();
 		OptionRowData				m_RowDef;
 		enum { ROW_NORMAL, ROW_EXIT } Type;
+		vector<BitmapText *>	m_textItemsBk;				//text which is put behind the items text to provide an edge
 		vector<BitmapText *>	m_textItems;				// size depends on m_bRowIsLong and which players are joined
 		vector<OptionsCursor *>	m_Underline[NUM_PLAYERS];	// size depends on m_bRowIsLong and which players are joined
 		Sprite					m_sprBullet;
@@ -143,6 +144,8 @@ protected:
 
 	Navigation		m_OptionsNavigation;
 
+	OptionIcon		m_HeaderOptionIcon[NUM_PLAYERS];
+	
 	int				m_iCurrentRow[NUM_PLAYERS];
 	int				m_iFocusX[NUM_PLAYERS];
 	void StoreFocus( PlayerNumber pn );

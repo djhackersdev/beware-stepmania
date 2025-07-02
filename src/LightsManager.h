@@ -34,6 +34,7 @@ enum LightsMode
 	LIGHTSMODE_STAGE,
 	LIGHTSMODE_ALL_CLEARED,
 	LIGHTSMODE_TEST,
+	LIGHTSMODE_EVALUATION,
 	NUM_LIGHTS_MODES
 };
 const CString& LightsModeToString( LightsMode lm );
@@ -63,6 +64,7 @@ public:
 private:
 	float m_fSecsLeftInCabinetLightBlink[NUM_CABINET_LIGHTS];
 	float m_fSecsLeftInGameButtonBlink[MAX_GAME_CONTROLLERS][MAX_GAME_BUTTONS];
+	float m_fLightsModeSince;
 
 	LightsDriver* m_pDriver;
 	LightsMode m_LightsMode;

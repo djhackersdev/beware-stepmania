@@ -130,8 +130,8 @@ void BPMDisplay::SetBPMRange( const DisplayBpms &bpms )
 
 	m_textBPM.StopTweening();
 	m_sprLabel->StopTweening();
-	m_textBPM.BeginTweening(0.5f);
-	m_sprLabel->BeginTweening(0.5f);
+	m_textBPM.BeginTweening(0.0f);
+	m_sprLabel->BeginTweening(0.0f);
 	if( GAMESTATE->IsExtraStage() || GAMESTATE->IsExtraStage2() )
 	{
 		m_textBPM.SetDiffuse( EXTRA_COLOR );
@@ -156,6 +156,9 @@ void BPMDisplay::CycleRandomly()
 	SetBPMRange( bpms );
 
 	m_fCycleTime = 0.2f;
+	m_textBPM.SetDiffuse( EXTRA_COLOR );
+	m_sprLabel->SetDiffuse( EXTRA_COLOR );
+
 }
 
 void BPMDisplay::NoBPM()

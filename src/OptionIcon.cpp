@@ -3,6 +3,7 @@
 #include "ThemeManager.h"
 #include "PlayerOptions.h"
 #include "RageUtil.h"
+#include "RageLog.h"
 
 #define TEXT_OFFSET_X	THEME->GetMetricF("OptionIcon","TextOffsetX")
 #define TEXT_OFFSET_Y	THEME->GetMetricF("OptionIcon","TextOffsetY")
@@ -46,14 +47,37 @@ void OptionIcon::Load( PlayerNumber pn, CString sText, bool bHeader )
 		sText.MakeUpper();
 
 	sText.Replace( " ", "\n" );
-
+	if (!strcmp(sText,"1.5X")) sText = "15X";
 	bool bVacant = (sText=="");
-	int iState = pn*3 + (bHeader?0:(bVacant?1:2));
-	m_spr.SetState( iState );
+	
+	CString graphicname = "";
+	if (!bVacant)
+		graphicname = THEME->GetPathToG(ssprintf("OptionIcon option %s",sText.c_str()),true);
 
-	m_text.SetText( bHeader ? CString("") : sText );
-	m_text.SetZoom( TEXT_ZOOM );
-	m_text.CropToWidth( TEXT_WIDTH );
+	if (graphicname!="")
+	{
+		//show the picture for the option
+		this->RemoveChild( &m_sprOption );
+		int iState = pn*3 + (bHeader?0:1);
+		m_sprOption.Load( graphicname );
+		m_sprOption.SetX( THEME->GetMetricF("OptionIcon","OptionPicX") );
+		m_sprOption.SetY( THEME->GetMetricF("OptionIcon","OptionPicY") );
+		this->AddChild( &m_sprOption );
+		m_text.SetText( CString(""));
+	} 
+	else
+	{
+		//show default picture + text
+		this->RemoveChild( &m_sprOption );
+		int iState = pn*3 + (bHeader?0:(bVacant?1:2));
+		m_spr.SetState( iState );
+
+		m_text.SetText( bHeader ? CString("") : sText );
+		m_text.SetZoom( TEXT_ZOOM );
+		m_text.CropToWidth( TEXT_WIDTH );
+	}
+	
+
 }
 
 void OptionIcon::DrawPrimitives()

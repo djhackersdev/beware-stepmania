@@ -16,6 +16,7 @@ class Trail;
 class DifficultyMeter: public ActorFrame
 {
 public:
+	int			glowoverride;
 	DifficultyMeter();
 
 	void Load();

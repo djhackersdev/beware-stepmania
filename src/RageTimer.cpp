@@ -51,11 +51,12 @@ float RageTimer::GetDeltaTime()
  * RageTimer AverageTime = tm.Half();
  * printf("Something happened between now and tm; the average time is %f.\n", tm.Ago());
  * tm.Touch();
+ * BUGFIX: Shodan: "...unbuffered direct input devices (like the gameport) required positive globaloffset values"
  */
 RageTimer RageTimer::Half() const
 {
 	const RageTimer now;
-	const float ProbableDelay = -(now - *this) / 2;
+	const float ProbableDelay = (now - *this) / 2;
 	return *this + ProbableDelay;
 }
 

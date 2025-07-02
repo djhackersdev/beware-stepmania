@@ -121,6 +121,18 @@ void ScreenGameplay::Init()
 	 * ScreenSelectMusic or the options menus at all. */
 	GAMESTATE->AdjustFailType();
 
+	//set fail type depending on end mode, because the failtype is stored outside stepmania.ini and may not properly get reset
+	if (PREFSMAN->m_bEventMode || PREFSMAN->m_bArcadeEventMode)
+	{
+		GAMESTATE->m_SongOptions.m_FailType = SongOptions::FAIL_OFF;
+	} else {
+		GAMESTATE->m_SongOptions.m_FailType = SongOptions::FAIL_IMMEDIATE;
+	}
+
+	//in a nonstop course, always set fail to immideate, like ddr. -beware
+	if (GAMESTATE->IsCourseMode())
+		GAMESTATE->m_SongOptions.m_FailType = SongOptions::FAIL_IMMEDIATE;
+
 	/* Save selected options before we change them. */
 	GAMESTATE->StoreSelectedOptions();
 
@@ -135,7 +147,6 @@ void ScreenGameplay::Init()
 	}
 
 	GAMESTATE->ResetStageStatistics();
-
 
 
 
@@ -325,7 +336,7 @@ void ScreenGameplay::Init()
 		this->AddChild( &m_Player[p] );
 	
 		m_sprOniGameOver[p].SetName( ssprintf("OniGameOver%i", p+1) );
-		m_sprOniGameOver[p].Load( THEME->GetPathG(m_sName,"oni gameover") );
+		m_sprOniGameOver[p].Load( THEME->GetPathG(m_sName,ssprintf("oni gameover p%i", p+1) ));
 		m_sprOniGameOver[p].SetX( fPlayerX );
 		m_sprOniGameOver[p].SetY( SCREEN_TOP - m_sprOniGameOver[p].GetZoomedHeight()/2 );
 		m_sprOniGameOver[p].SetDiffuse( RageColor(1,1,1,0) );	// 0 alpha so we don't waste time drawing while not visible
@@ -405,6 +416,15 @@ void ScreenGameplay::Init()
 		{
 			if( !GAMESTATE->IsPlayerEnabled(p) && !SHOW_LIFE_METER_FOR_DISABLED_PLAYERS )
 				continue;	// skip
+
+			//add oni life color things
+			if( GAMESTATE->m_SongOptions.m_LifeType == SongOptions::LIFE_BATTERY )
+			{
+				m_sprOniLifeColor[p].Load( THEME->GetPathG(m_sName,ssprintf("oni life color p%d",p+1)) );
+				m_sprOniLifeColor[p].SetName( ssprintf("LifeColorP%i", p+1) );
+				SET_XY( m_sprOniLifeColor[p] );
+				this->AddChild( &m_sprOniLifeColor[p] );
+			}
 
 			switch( GAMESTATE->m_SongOptions.m_LifeType )
 			{
@@ -574,7 +594,14 @@ void ScreenGameplay::Init()
 		m_sprStage.Load( THEME->GetPathG(m_sName,"stage "+GAMESTATE->GetStageText()) );
 		this->AddChild( &m_sprStage );
 		break;
-	case PLAY_MODE_NONSTOP:
+	//make nonstop show 1st, 2nd, etc, stage like ddr ex
+	case PLAY_MODE_NONSTOP: 
+		if (IsLastSong())
+			m_sprStage.Load( THEME->GetPathG(m_sName,"stage final") );		
+		else
+			m_sprStage.Load( THEME->GetPathG(m_sName,ssprintf("stage %d",GAMESTATE->GetStageIndex()+1)) );
+		this->AddChild( &m_sprStage );
+		break;
 	case PLAY_MODE_ONI:
 	case PLAY_MODE_ENDLESS:
 		this->AddChild( &m_sprCourseSongNumber );
@@ -626,7 +653,8 @@ void ScreenGameplay::Init()
 	{
 		m_DifficultyIcon[p].Load( THEME->GetPathG(m_sName,ssprintf("difficulty icons %dx%d",NUM_PLAYERS,NUM_DIFFICULTIES)) );
 		/* Position it in LoadNextSong. */
-		this->AddChild( &m_DifficultyIcon[p] );
+		if (!m_bDemonstration)
+			this->AddChild( &m_DifficultyIcon[p] );
 
 		// FIXME: Find a better way to handle this than changing the name
 		CString sName = m_DifficultyMeter[p].GetName();
@@ -843,6 +871,43 @@ void ScreenGameplay::SetupSong( PlayerNumber p, int iSongIndex )
 	GAMESTATE->Update(0);
 	GAMESTATE->RebuildPlayerOptionsFromActiveAttacks( p );
 
+	//solo glitch like ddr:
+	//if one player has solo, both must have it
+	//if one has solo and the other has flat, the other must get "soloflat"
+	int numplayers = 0;
+	FOREACH_EnabledPlayer(p) numplayers++;
+	if ((numplayers == 2) && THEME->GetMetricB(m_sName,"SoloNoteSkinQuirk")) for (int pn = 0; pn < 2; pn++)
+	{
+		if (!strcmp(GAMESTATE->m_PlayerOptions[1-pn].m_sNoteSkin,"solo"))
+		{
+			if (!strcmp(GAMESTATE->m_PlayerOptions[pn].m_sNoteSkin,"default"))
+			{
+				GAMESTATE->m_PlayerOptions[pn].m_sNoteSkin = "solo";
+				GAMESTATE->ResetNoteSkinsForPlayer((PlayerNumber) pn);
+			}
+			if (!strcmp(GAMESTATE->m_PlayerOptions[pn].m_sNoteSkin,"flat"))
+			{
+				// cache NoteSkin graphics
+				CStringArray asNames;
+				NOTESKIN->GetNoteSkinNames( asNames );
+				for( unsigned i=0; i<asNames.size(); i++ )
+				{
+					CString sDir = NOTESKIN->GetNoteSkinDir( asNames[i] );
+					CStringArray asGraphicPaths;
+					GetDirListing( sDir+"*.png", asGraphicPaths, false, true ); 
+					GetDirListing( sDir+"*.jpg", asGraphicPaths, false, true ); 
+					GetDirListing( sDir+"*.gif", asGraphicPaths, false, true ); 
+					GetDirListing( sDir+"*.bmp", asGraphicPaths, false, true ); 
+					for( unsigned j=0; j<asGraphicPaths.size(); j++ )
+						TEXTUREMAN->CacheTexture( asGraphicPaths[j] );
+				}
+				GAMESTATE->m_PlayerOptions[pn].m_sNoteSkin = "soloflat";
+				GAMESTATE->ResetNoteSkinsForPlayer((PlayerNumber) pn);
+			}
+		}
+
+	}
+
 	/* Hack: Course modifiers that are set to start immediately shouldn't tween on. */
 	GAMESTATE->m_CurrentPlayerOptions[p] = GAMESTATE->m_PlayerOptions[p];
 }
@@ -873,10 +938,12 @@ void ScreenGameplay::LoadNextSong()
 
 	FOREACH_EnabledPlayer( p )
 	{
-		g_CurStageStats.iSongsPlayed[p]++;
-		m_textCourseSongNumber[p].SetText( ssprintf("%d", g_CurStageStats.iSongsPlayed[p]) );
+		//do not increase number of played stages for a dead player --beware
+		if (!g_CurStageStats.bFailed[p])
+			g_CurStageStats.iSongsPlayed[p]++;
+		m_textCourseSongNumber[p].SetText( ssprintf("%02d", g_CurStageStats.iSongsPlayed[p]) );
 	}
-
+	
 	LoadCourseSongNumber( GetMaxSongsPlayed() );
 
 	int iPlaySongIndex = GAMESTATE->GetCourseSongIndex();
@@ -884,6 +951,14 @@ void ScreenGameplay::LoadNextSong()
 	GAMESTATE->m_pCurSong = m_apSongsQueue[iPlaySongIndex];
 	g_CurStageStats.vpSongs.push_back( GAMESTATE->m_pCurSong );
 
+	//make nonstop show 1st, 2nd, etc, stage like ddr ex
+	if (GAMESTATE->m_PlayMode == PLAY_MODE_NONSTOP) 
+	{
+		if (IsLastSong())
+			m_sprStage.Load( THEME->GetPathG(m_sName,"stage final") );
+		else if (GAMESTATE->GetCourseSongIndex() < 6)
+			m_sprStage.Load( THEME->GetPathG(m_sName,ssprintf("stage %d",GAMESTATE->GetCourseSongIndex()+1)) );
+	}
 	// No need to do this here.  We do it in SongFinished().
 	//GAMESTATE->RemoveAllActiveAttacks();
 
@@ -914,7 +989,7 @@ void ScreenGameplay::LoadNextSong()
 		if( !m_bDemonstration )
 			PROFILEMAN->IncrementStepsPlayCount( pSong, pSteps, p );
 
-		m_textPlayerOptions[p].SetText( GAMESTATE->m_PlayerOptions[p].GetString() );
+		m_textPlayerOptions[p].SetText( GAMESTATE->m_PlayerOptions[p].GetStringGameMode() );
 		m_ActiveAttackList[p].Refresh();
 
 		// reset oni game over graphic
@@ -992,6 +1067,10 @@ void ScreenGameplay::LoadNextSong()
 	{
 		FOREACH_EnabledPlayer( p )
 		{
+			//workaround for "trick course" (reverse changes each stage), allow doing a command on each stage -beware
+			m_DifficultyIcon[p].SetName( ssprintf("DifficultyP%d%sStage",p+1,bReverse[p]?"Reverse":"") );
+			ON_COMMAND( m_DifficultyIcon[p] );
+
 			m_DifficultyIcon[p].SetName( ssprintf("DifficultyP%d%s",p+1,bReverse[p]?"Reverse":"") );
 			SET_XY( m_DifficultyIcon[p] );
 
@@ -1089,15 +1168,14 @@ void ScreenGameplay::LoadNextSong()
 			pSteps = GAMESTATE->m_pCurSong->GetClosestNotes( GAMESTATE->GetCurrentStyle()->m_StepsType, StringToDifficulty(PREFSMAN->m_sLightsStepsDifficulty) );
 			if( pSteps )
 			{
-				NoteData TapNoteData;
-				pSteps->GetNoteData( &TapNoteData );
-				NoteDataUtil::LoadTransformedLights( TapNoteData, m_CabinetLightsNoteData, GameManager::StepsTypeToNumTracks(STEPS_TYPE_LIGHTS_CABINET) );
+				pSteps->GetNoteData( &m_CabinetLightsNoteData );
 			}
 		}
 
 		// Convert to 4s so that we can check if we're inside a hold with just 
 		// GetTapNote().
-		m_CabinetLightsNoteData.ConvertHoldNotesTo4s();
+		// extreme does a hold like a tap for lights -beware
+		NoteDataUtil::RemoveHoldNotes( m_CabinetLightsNoteData,-99999999.0f,99999999.0f);
 	}
 }
 
@@ -1285,6 +1363,37 @@ void ScreenGameplay::Update( float fDeltaTime )
 	m_BeginnerHelper.Update(fDeltaTime);
 	
 
+	// update oni life color things
+    FOREACH_EnabledPlayer(p)
+	{
+		if( GAMESTATE->m_SongOptions.m_LifeType == SongOptions::LIFE_BATTERY )
+		{
+			int lives = (int) (m_pLifeMeter[p]->GetLife() * GAMESTATE->m_SongOptions.m_iBatteryLives);
+			if ((lives > 4) || (lives == GAMESTATE->m_SongOptions.m_iBatteryLives)) lives = 4;
+			float frequency = 1.0f;
+			float intensity = 0.0f;
+			switch (lives)
+			{
+				case 1:
+					intensity = 0.9f;
+					break;
+				case 2:
+					frequency = 2.0f;
+					intensity = 0.6f;
+					break;
+				case 3:
+					frequency = 4.0f;
+					intensity = 0.3f;
+			}
+			float fBeat, fBPS;
+			bool bFreeze;
+			GAMESTATE->m_pCurSong->m_Timing.GetBeatAndBPSFromElapsedTime( GAMESTATE->m_fMusicSeconds, fBeat, fBPS, bFreeze );
+			float fPercentRed = sinf( fBeat*6.2831853f/frequency )/2+0.5f;
+			m_sprOniLifeColor[p].SetGlow( RageColor(fPercentRed*intensity,0,0,1) );
+		}
+	}
+
+
 	//
 	// update GameState HealthState
 	//
@@ -1444,12 +1553,17 @@ void ScreenGameplay::Update( float fDeltaTime )
 		//
 		m_fTimeSinceLastDancingComment += fDeltaTime;
 
+		bool b_hotcomment = false;
 		switch( GAMESTATE->m_PlayMode )
 		{
 		case PLAY_MODE_REGULAR:
 		case PLAY_MODE_BATTLE:
 		case PLAY_MODE_RAVE:
-			if( GAMESTATE->OneIsHot() )			
+			FOREACH_EnabledPlayer(p)
+				if (m_Player[p].m_pLifeMeter->GetLife() > 0.75)
+					b_hotcomment = true;
+			if (b_hotcomment)
+//			if( GAMESTATE->OneIsHot() )			
 				PlayAnnouncer( "gameplay comment hot", SECONDS_BETWEEN_COMMENTS );
 			else if( GAMESTATE->AllAreInDangerOrWorse() )	
 				PlayAnnouncer( "gameplay comment danger", SECONDS_BETWEEN_COMMENTS );
@@ -1564,11 +1678,9 @@ void ScreenGameplay::Update( float fDeltaTime )
 
 
 	// send blink data
-	bool bOverrideCabinetBlink = (GAMESTATE->m_fSongBeat < GAMESTATE->m_pCurSong->m_fFirstBeat) && bCrossedABeat;
-
 	FOREACH_CabinetLight( cl )
 	{
-		if( bOverrideCabinetBlink || bBlinkCabinetLight[cl] )
+		if( bBlinkCabinetLight[cl] )
 			LIGHTSMAN->BlinkCabinetLight( cl );
 	}
 
@@ -2051,6 +2163,9 @@ void ScreenGameplay::HandleScreenMessage( const ScreenMessage SM )
 			 * bFailedEarlier): */
 			const bool bAllReallyFailed = g_CurStageStats.AllFailed();
 
+			//also have the lights at the end of a song which isn't the last, in a course
+			LIGHTSMAN->SetLightsMode( LIGHTSMODE_ALL_CLEARED );
+
 			if( !bAllReallyFailed && !IsLastSong() )
 			{
 				/* Next song. */
@@ -2105,9 +2220,6 @@ void ScreenGameplay::HandleScreenMessage( const ScreenMessage SM )
 			GAMESTATE->RemoveAllActiveAttacks();
 			FOREACH_EnabledPlayer( p )
 				m_ActiveAttackList[p].Refresh();
-
-			LIGHTSMAN->SetLightsMode( LIGHTSMODE_ALL_CLEARED );
-
 
 			if( bAllReallyFailed )
 			{
@@ -2165,6 +2277,7 @@ void ScreenGameplay::HandleScreenMessage( const ScreenMessage SM )
 		 * obscured by the fade. */
 		StartPlayingSong( m_NextSongIn.GetLengthSeconds()+2, 0 );
 		m_NextSongIn.StartTransitioning( SM_None );
+		LIGHTSMAN->SetLightsMode( LIGHTSMODE_GAMEPLAY );
 		break;
 
 	case SM_PlayToasty:
@@ -2374,6 +2487,8 @@ void ScreenGameplay::TweenOnScreen()
 			ON_COMMAND( *m_pLifeMeter[p] );
 		if( !GAMESTATE->IsPlayerEnabled(p) )
 			continue;
+		if( GAMESTATE->m_SongOptions.m_LifeType == SongOptions::LIFE_BATTERY )
+			ON_COMMAND( m_sprOniLifeColor[p] );
 		ON_COMMAND( m_textCourseSongNumber[p] );
 		if( GAMESTATE->m_PlayMode == PLAY_MODE_RAVE )
 			ON_COMMAND( m_textPlayerName[p] );
@@ -2416,6 +2531,8 @@ void ScreenGameplay::TweenOffScreen()
 			OFF_COMMAND( *m_pLifeMeter[p] );
 		if( !GAMESTATE->IsPlayerEnabled(p) )
 			continue;
+		if( GAMESTATE->m_SongOptions.m_LifeType == SongOptions::LIFE_BATTERY )
+			ON_COMMAND( m_sprOniLifeColor[p] );
 		OFF_COMMAND( m_textCourseSongNumber[p] );
 		if( GAMESTATE->m_PlayMode == PLAY_MODE_RAVE )
 			OFF_COMMAND( m_textPlayerName[p] );

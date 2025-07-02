@@ -76,6 +76,7 @@ public:
 
 	RageCompiledGeometry* CreateCompiledGeometry();
 	void DeleteCompiledGeometry( RageCompiledGeometry* p );
+	void DrawLineStripInternal( const RageSpriteVertex v[], int iNumVerts, float LineWidth );
 
 protected:
 	void DrawQuadsInternal( const RageSpriteVertex v[], int iNumVerts );

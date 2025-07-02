@@ -107,6 +107,7 @@ protected:
 	Sprite				m_sprStaticBackground;
 	Sprite				m_sprLifeFrame;
 	LifeMeter*			m_pLifeMeter[NUM_PLAYERS];
+	Sprite				m_sprOniLifeColor[NUM_PLAYERS];
 	CombinedLifeMeter*	m_pCombinedLifeMeter;
 	Sprite				m_sprStage;
 	Sprite				m_sprCourseSongNumber;

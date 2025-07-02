@@ -25,6 +25,9 @@
 #include "BGAnimation.h"
 #include "RageUtil_BackgroundLoader.h"
 
+#define NUM_ANIM_BPMDISPLAY 5
+#define MIDDLE_ANIM_BPMDISPLAY ((NUM_ANIM_BPMDISPLAY-1)/2)
+
 class ScreenSelectMusic : public ScreenWithMenuElements
 {
 public:
@@ -101,6 +104,10 @@ protected:
 	HelpDisplay			m_Artist;
 	BitmapText			m_MachineRank;
 	PaneDisplay			m_PaneDisplay[NUM_PLAYERS];
+	BPMDisplay			m_AnimBPMDisplay[NUM_ANIM_BPMDISPLAY];
+	float				m_AnimBPMDisplayY;
+	BitmapText			m_textItemName;
+	Sprite				m_sprItemNameCard;
 
 	bool				m_bMadeChoice;
 	bool				m_bGoToOptions;

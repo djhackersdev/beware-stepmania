@@ -17,6 +17,8 @@
 static const int TIMER_SECONDS = 99;
 static const int MAX_STALL_SECONDS = 30;
 
+bool m_bWarning;
+
 MenuTimer::MenuTimer()
 {
 	m_fStallSeconds = 0;
@@ -70,7 +72,7 @@ void MenuTimer::Update( float fDeltaTime )
 	const int iOldDisplay = (int)(fOldSecondsLeft + 0.99f);
 	const int iNewDisplay = (int)(fNewSecondsLeft + 0.99f);
 
-	if( fOldSecondsLeft > 5.5  &&  fNewSecondsLeft < 5.5 )	// transition to below 5.5
+	if( fOldSecondsLeft > 5.5  &&  fNewSecondsLeft < 5.5  && m_bWarning )	// transition to below 5.5
 		SOUND->PlayOnceFromDir( ANNOUNCER->GetPathTo("hurry up") );
 
 	if( iOldDisplay == iNewDisplay )
@@ -78,7 +80,7 @@ void MenuTimer::Update( float fDeltaTime )
 
 	SetText( iNewDisplay );
 
-	if( iNewDisplay <= WARNING_START )
+	if( (iNewDisplay <= WARNING_START) && m_bWarning )
 	{
 		m_textDigit1.Command( WARNING_COMMAND(iNewDisplay) );
 		m_textDigit2.Command( WARNING_COMMAND(iNewDisplay) );
@@ -92,7 +94,7 @@ void MenuTimer::Update( float fDeltaTime )
 		m_textDigit2.SetEffectNone();
 	}
 
-	if( iNewDisplay <= WARNING_BEEP_START )
+	if( iNewDisplay <= WARNING_BEEP_START  && m_bWarning )
 		m_soundBeep.Play();
 }
 
@@ -137,6 +139,9 @@ void MenuTimer::SetSeconds( int iSeconds )
 	m_textDigit2.Command( ON_COMMAND );
 
 	SetText( iSeconds );
+	
+	//assume we're on an evaluation screen
+	m_bWarning = ((iSeconds != 15) && (iSeconds != 40));
 }
 
 void MenuTimer::Start()
