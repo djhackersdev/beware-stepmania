@@ -336,7 +336,7 @@ Display *g_X11Display = NULL;
 
 static void LogGLXDebugInformation()
 {
-#if defined(UNIX)
+#if 0
 	ASSERT( g_X11Display );
 
 	const int scr = DefaultScreen( g_X11Display );
