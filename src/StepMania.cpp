@@ -1059,7 +1059,6 @@ int main(int argc, char* argv[])
 	/* depends on SONGINDEX: */
 	SONGMAN		= new SongManager();
 	SONGMAN->InitAll( loading_window );		// this takes a long time
-	CRYPTMAN	= new CryptManager;	// need to do this before ProfileMan
 	MEMCARDMAN	= new MemoryCardManager;
 	PROFILEMAN	= new ProfileManager;
 	PROFILEMAN->Init();				// must load after SONGMAN
@@ -1150,7 +1149,6 @@ int main(int argc, char* argv[])
 	SAFE_DELETE( MODELMAN );
 	SAFE_DELETE( PROFILEMAN );	// PROFILEMAN needs the songs still loaded
 	SAFE_DELETE( UNLOCKMAN );
-	SAFE_DELETE( CRYPTMAN );
 	SAFE_DELETE( MEMCARDMAN );
 	SAFE_DELETE( SONGMAN );
 	SAFE_DELETE( BANNERCACHE );
@@ -1254,9 +1252,6 @@ CString SaveScreenshot( CString sDir, bool bSaveCompressed, bool bMakeSignature,
 	// the Dir cache.  There's got to be a better way of doing this than 
 	// thowing out all the cache. -Chris
 	FlushDirCache();
-
-	if( PREFSMAN->m_bSignProfileData && bMakeSignature )
-		CryptManager::SignFileToFile( sPath );
 
 	return sFileName;
 }

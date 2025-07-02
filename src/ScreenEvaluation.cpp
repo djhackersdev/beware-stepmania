@@ -1483,7 +1483,7 @@ void ScreenEvaluation::Input( const DeviceInput& DeviceI, const InputEventType t
 				{
 					Screenshot screenshot;
 					screenshot.sFileName = sFileName;
-					screenshot.sMD5 = CRYPTMAN->GetMD5( sPath );
+					//screenshot.sMD5 = CRYPTMAN->GetMD5( sPath );
 					screenshot.highScore = hs;
 					pProfile->AddScreenshot( screenshot );
 				}

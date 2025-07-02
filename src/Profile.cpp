@@ -62,15 +62,7 @@ void Profile::InitGeneralData()
 {
 	// Init m_iGuid.
 	// Does the RNG need to be inited and seeded every time?
-	random_init();
-	random_add_noise( "ai8049ujr3odusj" );
-	
-	{
-		m_sGuid = "";
-		for( unsigned i=0; i<GUID_SIZE_BYTES; i++ )
-			m_sGuid += ssprintf( "%02x", random_byte() );
-	}
-
+		m_sGuid = "x";
 
 	m_bUsingProfileDefaultModifiers = false;
 	m_sDefaultModifiers = "";
@@ -598,31 +590,6 @@ bool Profile::LoadAllFromDir( CString sDir, bool bRequireSignature )
 			}
 		}
 
-		if( bRequireSignature )
-		{
-
-			CString sStatsXmlSigFile = fn+SIGNATURE_APPEND;
-			CString sDontShareFile = sDir + DONT_SHARE_SIG;
-
-			LOG->Trace( "Verifying don't share signature" );
-			// verify the stats.xml signature with the "don't share" file
-			if( !CryptManager::VerifyFileWithFile(sStatsXmlSigFile, sDontShareFile) )
-			{
-				LOG->Warn( "The don't share check for '%s' failed.  Data will be ignored.", sStatsXmlSigFile.c_str() );
-				break;
-			}
-			LOG->Trace( "Done." );
-
-			// verify stats.xml
-			LOG->Trace( "Verifying stats.xml signature" );
-			if( !CryptManager::VerifyFileWithFile(fn, sStatsXmlSigFile) )
-			{
-				LOG->Warn( "The signature check for '%s' failed.  Data will be ignored.", fn.c_str() );
-				break;
-			}
-			LOG->Trace( "Done." );
-		}
-
 		LOG->Trace( "Loading %s", fn.c_str() );
 		XNode xml;
 		if( !xml.LoadFromFile( fn ) )
@@ -684,19 +651,6 @@ bool Profile::SaveAllToDir( CString sDir, bool bSignData ) const
 	
 	// Update file cache, or else IsAFile in CryptManager won't see this new file.
 	FILEMAN->FlushDirCache( sDir );
-	
-	if( bSaved && bSignData )
-	{
-		CString sStatsXmlSigFile = fn+SIGNATURE_APPEND;
-		CryptManager::SignFileToFile(fn, sStatsXmlSigFile);
-
-		// Update file cache, or else IsAFile in CryptManager won't see sStatsXmlSigFile.
-		FILEMAN->FlushDirCache( sDir );
-
-		// Save the "don't share" file
-		CString sDontShareFile = sDir + DONT_SHARE_SIG;
-		CryptManager::SignFileToFile(sStatsXmlSigFile, sDontShareFile);
-	}
 
 	SaveStatsWebPageToDir( sDir );
 
@@ -1249,8 +1203,6 @@ void Profile::SaveStatsWebPageToDir( CString sDir ) const
 
 void Profile::SaveMachinePublicKeyToDir( CString sDir ) const
 {
-	if( PREFSMAN->m_bSignProfileData && IsAFile(CRYPTMAN->GetPublicKeyFileName()) )
-		FileCopy( CRYPTMAN->GetPublicKeyFileName(), sDir+PUBLIC_KEY_FILE );
 }
 
 void Profile::AddScreenshot( const Screenshot &screenshot )

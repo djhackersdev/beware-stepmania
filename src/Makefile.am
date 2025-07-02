@@ -249,7 +249,7 @@ ActorScroller.cpp ActorScroller.h ActorUtil.cpp ActorUtil.h BitmapText.cpp Bitma
 ModelManager.cpp ModelManager.h ModelTypes.cpp ModelTypes.h Quad.h Sprite.cpp Sprite.h
 
 GlobalSingletons = \
-AnnouncerManager.cpp AnnouncerManager.h Bookkeeper.cpp Bookkeeper.h CryptManager.cpp CryptManager.h \
+AnnouncerManager.cpp AnnouncerManager.h Bookkeeper.cpp Bookkeeper.h \
 FontManager.cpp FontManager.h GameSoundManager.cpp GameSoundManager.h GameManager.cpp GameManager.h \
 GameState.cpp GameState.h InputFilter.cpp InputFilter.h \
 InputMapper.cpp InputMapper.h InputQueue.cpp InputQueue.h LightsManager.cpp LightsManager.h \
@@ -292,9 +292,7 @@ main_SOURCES = $(Screens) \
 		$(ActorsInGameplay) \
 		$(Rage) \
 		$(Actors) \
-		$(GlobalSingletons) \
-		$(crypto) \
-		$(cryptopp)
+		$(GlobalSingletons)
 
 main_LDADD = \
 		  $(AUDIO_LIBS) \
