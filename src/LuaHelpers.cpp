@@ -7,6 +7,8 @@
 #include <csetjmp>
 #include <cassert>
 
+#include <time.h>
+
 LuaFunctionList *g_LuaFunctionList = NULL;
 
 #if defined(_WINDOWS)
