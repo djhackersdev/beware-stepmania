@@ -158,7 +158,7 @@ static CString DeviceName()
 {
 	if( !PREFSMAN->m_iSoundDevice.empty() )
 		return PREFSMAN->m_iSoundDevice;
-	return "hw:0";
+	return "default";
 }
 
 void Alsa9Buf::GetSoundCardDebugInfo()
