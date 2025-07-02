@@ -1,0 +1,16 @@
+*.a
+*.o
+.deps
+Makefile
+Makefile.in
+aclocal.m4
+autoconf/compile
+autoconf/test-driver
+autom4te.cache/
+config.h
+config.log
+config.status
+configure
+testresample
+stamp-h1
+stepmania
