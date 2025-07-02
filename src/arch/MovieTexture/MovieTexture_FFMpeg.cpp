@@ -44,7 +44,7 @@ struct AVPixelFormat_t
 		{ 0x00FF0000,
 		  0x0000FF00,
 		  0x000000FF,
-		  0xFF000000 },
+		  (int) 0xFF000000 },
 		avcodec::PIX_FMT_RGBA32,
 		true,
 		false
