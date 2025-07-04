@@ -3,7 +3,7 @@ AC_DEFUN([SM_X_WITH_OPENGL],
     AC_PATH_X
     
     XCFLAGS=
-    XLIBS=
+    XLIBS=-lX11
 
     if test "$no_x" != "yes"; then
 	if test -n "$x_includes"; then
@@ -11,7 +11,7 @@ AC_DEFUN([SM_X_WITH_OPENGL],
 	fi
 
 	if test -n "$x_libraries"; then
-	    XLIBS="-L$x_libraries -lX11"
+	    XLIBS="-L$x_libraries"
 	fi
 
 	if test -n "$x_includes"; then
